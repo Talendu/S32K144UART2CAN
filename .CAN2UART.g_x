@@ -1,0 +1,104 @@
+<CodeGenerationInfo>
+  <ToolchainSettings>
+    <option>
+      <name>PE_G_4PEx_ToolChain_C_Compiler_Includes</name>
+      <values lines_count="9">
+        <Line>"${ProjDirPath}/SDK/platform/hal/src/sim/S32K144"</Line>
+        <Line>"${ProjDirPath}/SDK/platform/drivers/src/clock/S32K144"</Line>
+        <Line>"${ProjDirPath}/SDK/rtos/osif/"</Line>
+        <Line>"${ProjDirPath}/SDK/platform/devices"</Line>
+        <Line>"${ProjDirPath}/SDK/platform/devices/common"</Line>
+        <Line>"${ProjDirPath}/SDK/platform/devices/S32K144/include"</Line>
+        <Line>"${ProjDirPath}/SDK/platform/devices/S32K144/startup"</Line>
+        <Line>"${ProjDirPath}/SDK/platform/hal/inc"</Line>
+        <Line>"${ProjDirPath}/SDK/platform/drivers/inc"</Line>
+      </values>
+    </option>
+    <option>
+      <name>PE_G_4PEx_ilg_gnuarmeclipse_managedbuild_cross_option_c_compiler_defs</name>
+      <values lines_count="1">
+        <Line>"CPU_S32K144_100"</Line>
+      </values>
+    </option>
+  </ToolchainSettings>
+  <GeneratedFilesList>
+    <GeneratedByPE>
+      <File Name="SDK/platform/drivers/src/clock/S32K144/clock_S32K144.c" FileDate="2018-04-17, 15:57:20" FileAge="1523951840271" FileType="1048576" />
+      <File Name="Generated_Code/osif1.h" FileDate="2018-04-17, 16:03:19" FileAge="1523952199753" FileType="45637" />
+      <File Name="SDK/platform/hal/src/smc/smc_hal.c" FileDate="2018-04-17, 15:57:20" FileAge="1523951840165" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/crc_hal.h" FileDate="2018-04-18, 15:37:26" FileAge="1524037046777" FileType="1048576" />
+      <File Name="Generated_Code/osif1.c" FileDate="2018-04-17, 16:03:19" FileAge="1523952199739" FileType="45637" />
+      <File Name="SDK/platform/drivers/src/edma/edma_common.c" FileDate="2018-04-17, 16:03:19" FileAge="1523952199026" FileType="1048576" />
+      <File Name="SDK/platform/drivers/inc/crc_driver.h" FileDate="2018-04-18, 15:37:26" FileAge="1524037046798" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/pcc_hal.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840135" FileType="1048576" />
+      <File Name="Generated_Code/flash1.h" FileDate="2018-04-18, 17:29:12" FileAge="1524043752918" FileType="45637" />
+      <File Name="Generated_Code/flash1.c" FileDate="2018-04-18, 17:29:12" FileAge="1524043752935" FileType="45637" />
+      <File Name="SDK/platform/devices/status.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840381" FileType="1048576" />
+      <File Name="SDK/rtos/osif/osif_baremetal.c" FileDate="2018-04-17, 16:03:19" FileAge="1523952199101" FileType="1048576" />
+      <File Name="SDK/platform/devices/devassert.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840357" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/gpio_hal.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840313" FileType="1048576" />
+      <File Name="SDK/platform/drivers/inc/pins_driver.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840319" FileType="1048576" />
+      <File Name="SDK/rtos/osif/osif.h" FileDate="2018-04-17, 16:03:19" FileAge="1523952199071" FileType="1048576" />
+      <File Name="SDK/platform/drivers/src/interrupt/interrupt_manager.c" FileDate="2018-04-17, 15:57:19" FileAge="1523951839968" FileType="1048576" />
+      <File Name="SDK/platform/drivers/src/flexcan/flexcan_common.c" FileDate="2018-04-17, 16:03:19" FileAge="1523952199222" FileType="1048576" />
+      <File Name="SDK/platform/hal/src/sim/S32K144/sim_hal_S32K144.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840059" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/flexcan_hal.h" FileDate="2018-04-17, 16:03:19" FileAge="1523952199166" FileType="1048576" />
+      <File Name="SDK/platform/hal/src/sim/S32K144/sim_hal_S32K144.c" FileDate="2018-04-17, 15:57:20" FileAge="1523951840031" FileType="1048576" />
+      <File Name="SDK/platform/devices/common/s32_core_cm4.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840396" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/smc_hal.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840192" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/dmamux_hal.h" FileDate="2018-04-17, 16:03:18" FileAge="1523952198956" FileType="1048576" />
+      <File Name="SDK/platform/drivers/src/edma/edma_irq.c" FileDate="2018-04-17, 16:03:19" FileAge="1523952199047" FileType="1048576" />
+      <File Name="SDK/platform/drivers/src/edma/edma_driver.c" FileDate="2018-04-17, 16:03:19" FileAge="1523952199036" FileType="1048576" />
+      <File Name="Generated_Code/canCom0.h" FileDate="2018-04-17, 16:04:12" FileAge="1523952252409" FileType="45637" />
+      <File Name="SDK/platform/hal/src/edma/edma_hal.c" FileDate="2018-04-17, 16:03:18" FileAge="1523952198998" FileType="1048576" />
+      <File Name="SDK/platform/hal/src/lpuart/lpuart_hal.c" FileDate="2018-04-17, 16:56:25" FileAge="1523955385342" FileType="1048576" />
+      <File Name="SDK/platform/devices/S32K144/startup/system_S32K144.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840464" FileType="1048576" />
+      <File Name="SDK/platform/devices/S32K144/include/S32K144_features.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840502" FileType="1048576" />
+      <File Name="Generated_Code/canCom0.c" FileDate="2018-04-17, 16:03:19" FileAge="1523952199395" FileType="45637" />
+      <File Name="SDK/platform/hal/src/pcc/pcc_hal.c" FileDate="2018-04-17, 15:57:20" FileAge="1523951840125" FileType="1048576" />
+      <File Name="SDK/platform/devices/startup.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840433" FileType="1048576" />
+      <File Name="SDK/platform/devices/S32K144/startup/system_S32K144.c" FileDate="2018-04-17, 15:57:20" FileAge="1523951840491" FileType="1048576" />
+      <File Name="SDK/platform/hal/src/pmc/pmc_hal.c" FileDate="2018-04-17, 15:57:20" FileAge="1523951840146" FileType="1048576" />
+      <File Name="SDK/platform/devices/startup.c" FileDate="2018-04-17, 15:57:20" FileAge="1523951840448" FileType="1048576" />
+      <File Name="SDK/platform/drivers/src/flexcan/flexcan_driver.c" FileDate="2018-04-17, 16:03:19" FileAge="1523952199250" FileType="1048576" />
+      <File Name="SDK/platform/hal/src/crc/crc_hal.c" FileDate="2018-04-18, 15:37:26" FileAge="1524037046774" FileType="1048576" />
+      <File Name="Generated_Code/dmaController0.h" FileDate="2018-04-17, 16:04:12" FileAge="1523952252355" FileType="45637" />
+      <File Name="Generated_Code/dmaController0.c" FileDate="2018-04-17, 16:04:12" FileAge="1523952252373" FileType="45637" />
+      <File Name="Generated_Code/crc.h" FileDate="2018-04-18, 15:37:26" FileAge="1524037046863" FileType="45637" />
+      <File Name="SDK/platform/devices/S32K144/include/S32K144.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840513" FileType="1048576" />
+      <File Name="Generated_Code/crc.c" FileDate="2018-04-18, 15:37:26" FileAge="1524037046859" FileType="45637" />
+      <File Name="SDK/platform/drivers/inc/clock_manager.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840282" FileType="1048576" />
+      <File Name="Generated_Code/clockMan1.h" FileDate="2018-04-18, 15:37:26" FileAge="1524037046892" FileType="45637" />
+      <File Name="SDK/platform/hal/src/dmamux/dmamux_hal.c" FileDate="2018-04-17, 16:03:18" FileAge="1523952198948" FileType="1048576" />
+      <File Name="Generated_Code/clockMan1.c" FileDate="2018-04-19, 11:07:53" FileAge="1524107273318" FileType="45637" />
+      <File Name="SDK/platform/hal/src/port/port_hal.c" FileDate="2018-04-17, 15:57:20" FileAge="1523951840300" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/sim_hal.h" FileDate="2018-04-17, 15:57:19" FileAge="1523951839998" FileType="1048576" />
+      <File Name="SDK/platform/drivers/inc/edma_driver.h" FileDate="2018-04-17, 16:03:19" FileAge="1523952199055" FileType="1048576" />
+      <File Name="Sources/main.c" FileDate="2018-04-18, 17:29:12" FileAge="1524043752956" FileType="128" />
+      <File Name="SDK/platform/hal/src/flexcan/flexcan_hal.c" FileDate="2018-04-17, 16:03:19" FileAge="1523952199148" FileType="1048576" />
+      <File Name="SDK/platform/drivers/src/flash/flash_driver.c" FileDate="2018-04-18, 15:25:55" FileAge="1524036355173" FileType="1048576" />
+      <File Name="SDK/platform/drivers/inc/interrupt_manager.h" FileDate="2018-04-17, 15:57:19" FileAge="1523951839981" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/lpuart_hal.h" FileDate="2018-04-17, 16:56:25" FileAge="1523955385352" FileType="1048576" />
+      <File Name="SDK/platform/drivers/src/clock/clock_manager.c" FileDate="2018-04-17, 15:57:20" FileAge="1523951840224" FileType="1048576" />
+      <File Name="SDK/platform/drivers/inc/flexcan_driver.h" FileDate="2018-04-17, 16:03:19" FileAge="1523952199300" FileType="1048576" />
+      <File Name="SDK/platform/drivers/src/flexcan/flexcan_irq.c" FileDate="2018-04-17, 16:03:19" FileAge="1523952199257" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/port_hal.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840307" FileType="1048576" />
+      <File Name="Documentation/CAN2UART.txt" FileDate="2018-04-18, 17:29:13" FileAge="1524043753271" FileType="3072" />
+      <File Name="SDK/platform/drivers/src/crc/crc_driver.c" FileDate="2018-04-18, 15:37:26" FileAge="1524037046794" FileType="1048576" />
+      <File Name="SDK/platform/drivers/inc/flash_driver.h" FileDate="2018-04-18, 15:25:55" FileAge="1524036355186" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/pmc_hal.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840152" FileType="1048576" />
+      <File Name="SDK/platform/hal/src/scg/scg_hal.c" FileDate="2018-04-17, 15:57:20" FileAge="1523951840107" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/edma_hal.h" FileDate="2018-04-17, 16:03:19" FileAge="1523952199006" FileType="1048576" />
+      <File Name="SDK/platform/hal/inc/scg_hal.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840114" FileType="1048576" />
+      <File Name="SDK/platform/drivers/src/pins/pins_driver.c" FileDate="2018-04-17, 15:57:20" FileAge="1523951840346" FileType="1048576" />
+      <File Name="Generated_Code/Cpu.h" FileDate="2018-04-18, 15:37:26" FileAge="1524037046922" FileType="45637" />
+      <File Name="Documentation/CAN2UART_Settings.xml" FileDate="2018-04-18, 17:29:13" FileAge="1524043753206" FileType="3072" />
+      <File Name="Generated_Code/Cpu.c" FileDate="2018-04-18, 15:37:26" FileAge="1524037046932" FileType="45637" />
+      <File Name="Generated_Code/pin_mux.h" FileDate="2018-04-17, 17:21:46" FileAge="1523956906973" FileType="45637" />
+      <File Name="Generated_Code/pin_mux.c" FileDate="2018-04-17, 17:21:46" FileAge="1523956906997" FileType="45637" />
+      <File Name="SDK/platform/devices/device_registers.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840387" FileType="1048576" />
+      <File Name="SDK/platform/drivers/src/clock/S32K144/clock_S32K144.h" FileDate="2018-04-17, 15:57:20" FileAge="1523951840277" FileType="1048576" />
+    </GeneratedByPE>
+  </GeneratedFilesList>
+  <CodeGenReference>14</CodeGenReference>
+</CodeGenerationInfo>
