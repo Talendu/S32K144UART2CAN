@@ -4,15 +4,16 @@
  *  Created on: 2018年4月8日
  *      Author: Administrator
  */
-#include "configcodes.h"
+#include "config.h"
 
 
-char *device_item[DEVICE_CODES_COUNT] = {
+const char *g_device_item[DEVICE_CODES_COUNT] = {
     "@U",       /* 代表后面的内容是配置串口 */
     "@C",       /* 代表后面的内容是配置CAN */
     "@O",       /* 代表后面的内容是配置其他 */
 };
-char *config_item[CONFIG_CODES_COUNT] = {
+
+const char *g_config_item[CONFIG_CODES_COUNT] = {
         "AT",
         "+",
         "=",
@@ -32,10 +33,13 @@ char *config_item[CONFIG_CODES_COUNT] = {
         "IDMASK",   /* 接收ID屏蔽码 */
 };
 
-char *statu_item[STATU_CODES_COUNT] = {
+const char *g_statu_item[STATU_CODES_COUNT] = {
         "OK",
         "ERROR"
 };
+
+
+
 
 status_t string2number(uint8_t *p_string, uint32_t *p_number) {
     uint8_t *p = p_string;

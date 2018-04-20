@@ -8,7 +8,7 @@
 #include "mlpuart.h"
 
 #define USART_REC_LEN 32
-uint8_t USART_RX_BUF[USART_REC_LEN];     //接收缓冲,最大USART_REC_LEN个字节.
+uint8_t g_uart_rx_buff[USART_REC_LEN];     //接收缓冲,最大USART_REC_LEN个字节.
 
 /*
  * 接收状态
@@ -16,13 +16,15 @@ uint8_t USART_RX_BUF[USART_REC_LEN];     //接收缓冲,最大USART_REC_LEN个字节.
  * bit14，    接收到0x0d
  * bit13~0，  接收到的有效字节数目
  */
-uint16_t USART_RX_STA=0;
+uint16_t g_uart_rx_sta=0;
 
 
 m_lpuart_config_t m_lpuart0_config;
 fifo_t lpuart_rx_fifo;
 lpuart_rx_frame_t lpuart_rx_base[1024];
 uint8_t lpuart_rx_len = 0;
+
+lpuart0_irq_callback_t __gfn_lpuart0_irq_callback = NULL;
 
 const lpuart_user_config_t g_lpuart_default_UserConfig = {
         .baudRate = 115200,
@@ -35,7 +37,6 @@ const lpuart_user_config_t g_lpuart_default_UserConfig = {
 };
 
 
-lpuart0_irq_callback_t lpuart0_irq_callback = NULL;
 
 void lpuart_RX_callback_transparent_transmission()
 {
@@ -89,23 +90,23 @@ void lpuart_RX_callback_configuration_parameters()
         uint8_t Res;
         Res = LPUART0->DATA; /* 读取接收到的数据 */
 
-        if((USART_RX_STA&0x8000)==0)/* 接收未完成 */
+        if((g_uart_rx_sta&0x8000)==0)/* 接收未完成 */
         {
-            if(USART_RX_STA&0x4000)     /* 接收到了0x0d */
+            if(g_uart_rx_sta&0x4000)     /* 接收到了0x0d */
             {
                 if(Res != 0x0a) {           /* 接收错误,重新开始 */
-                    USART_RX_STA=0;
+                    g_uart_rx_sta=0;
                 } else {                    /* 接收完成了 */
-                    USART_RX_STA|=0x8000;
+                    g_uart_rx_sta|=0x8000;
                 }
             } else {                    /* 还没收到0X0D */
                 if(Res==0x0d) {             /* 收到0X0D */
-                    USART_RX_STA|=0x4000;
+                    g_uart_rx_sta|=0x4000;
                 } else {                    /* 接到数据 */
-                    USART_RX_BUF[USART_RX_STA&0X3FFF] = Res;
-                    USART_RX_STA++;
-                    if(USART_RX_STA>(USART_REC_LEN-1)) { /* 接收数据错误,重新开始接收 */
-                        USART_RX_STA = 0;
+                    g_uart_rx_buff[g_uart_rx_sta&0X3FFF] = Res;
+                    g_uart_rx_sta++;
+                    if(g_uart_rx_sta>(USART_REC_LEN-1)) { /* 接收数据错误,重新开始接收 */
+                        g_uart_rx_sta = 0;
                     }
                 }
             }
@@ -162,7 +163,7 @@ status_t LPUART0_init(lpuart_user_config_t *lpuartUserConfig)
  */
 void LPUART_InstallRxCallback(lpuart0_irq_callback_t callback)
 {
-    lpuart0_irq_callback = callback;
+    __gfn_lpuart0_irq_callback = callback;
 }
 
 
@@ -172,8 +173,8 @@ void LPUART_InstallRxCallback(lpuart0_irq_callback_t callback)
  */
 void LPUART0_RxTx_IRQHandler()
 {
-    if (lpuart0_irq_callback != NULL) {
-        lpuart0_irq_callback();
+    if (__gfn_lpuart0_irq_callback != NULL) {
+        __gfn_lpuart0_irq_callback();
     } else {
         if (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_RX_DATA_REG_FULL)) {
             LPUART0->FIFO |= LPUART_FIFO_RXFLUSH_MASK;
@@ -194,9 +195,9 @@ void LPUART0_print_option_status(device_item_index_t device_item_index,
                                  statu_item_t        status_item_index)
 {
     LPUART0_transmit_string("Set ");
-    LPUART0_transmit_string(config_item[config_item_index]);
+    LPUART0_transmit_string(g_config_item[config_item_index]);
     LPUART0_transmit_char(' ');
-    LPUART0_transmit_string(statu_item[status_item_index]);
+    LPUART0_transmit_string(g_statu_item[status_item_index]);
     LPUART0_transmit_string("\r\n");
 }
 
@@ -293,8 +294,8 @@ void LPUART0_print_config_parameter(device_item_index_t device_item_index,
                                     config_item_index_t config_item_index,
                                     uint32_t            parameter)
 {
-    LPUART0_transmit_string(device_item[device_item_index]);
-    LPUART0_transmit_string(config_item[config_item_index]);
+    LPUART0_transmit_string(g_device_item[device_item_index]);
+    LPUART0_transmit_string(g_config_item[config_item_index]);
     LPUART0_transmit_char(':');
     LPUART_transmit_number(LPUART0, parameter);
     LPUART0_transmit_string("\r\n");
@@ -377,7 +378,7 @@ void LPUART0_transmit_char(char send)
  * \param   buffer[in]  要发送的数据
  * \param   len[in]     要发送的数据的长度
  */
-void LPUART0_trancemit_buffer(uint8_t *buffer, uint32_t len)
+void LPUART0_trancemit_buffer(const uint8_t *buffer, uint32_t len)
 {
     uint32_t idx;
     for (idx=0; idx<len; idx++) {
@@ -386,8 +387,7 @@ void LPUART0_trancemit_buffer(uint8_t *buffer, uint32_t len)
     }
 }
 
-
-void LPUART0_transmit_string(char *data_string)
+void LPUART0_transmit_string(const char *data_string)
 {
   uint32_t i=0;
   while(data_string[i] != '\0')  {

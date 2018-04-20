@@ -5,13 +5,16 @@
  *      Author: Administrator
  */
 
-#ifndef CONFIGCODES_H_
-#define CONFIGCODES_H_
+#ifndef CONFIG_H_
+#define CONFIG_H_
 #include "S32K144.h"
 #include "status.h"
 
+/**
+ * \brief   配置命令中外设分类信息码在数组中的位置
+ */
 typedef enum {
-    U_index,
+    U_index = 0,
     C_index,
     O_index,
     DEVICE_CODES_COUNT
@@ -35,14 +38,18 @@ typedef enum {
 }config_item_index_t;
 
 typedef enum {
-    OK_index,
+    OK_index = 0,
     ERROR_index,
     STATU_CODES_COUNT
 }statu_item_t;
 
-extern char *device_item[];
-extern char *config_item[];
-extern char *statu_item[];
+
+
+
+
+extern const char *g_device_item[];
+extern const char *g_config_item[];
+extern const char *g_statu_item[];
 /**
  * \brief   将数字字符串转换为数字
  * \retval  STATUS_ERROR    转换错误
@@ -51,4 +58,4 @@ extern char *statu_item[];
  *          必须是含有结束位的字符串,否则可能会得到意料之外的结果
  */
 status_t string2number(uint8_t *string, uint32_t *number);
-#endif /* CONFIGCODES_H_ */
+#endif /* CONFIG_H_ */

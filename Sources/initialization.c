@@ -49,7 +49,7 @@ status_t get_parameters_from_EEPROM(void){
 
     CRC_DRV_Init(INST_CRC, &crc_InitConfig0);
     CRC_DRV_WriteData(INST_CRC, (uint8_t*)config_parameter,
-            sizeof(m_lpuart0_config) + sizeof(m_flexcan_config));
+            sizeof(m_lpuart0_config) + sizeof(g_m_flexcan_config));
     crcret = CRC_DRV_GetCrcResult(INST_CRC);
 
     if (crcret != config_parameter->crc) {
@@ -58,7 +58,7 @@ status_t get_parameters_from_EEPROM(void){
     }
 
     m_lpuart0_config = config_parameter->m_lpuart_config;
-    m_flexcan_config = config_parameter->m_flexcan_config;
+    g_m_flexcan_config = config_parameter->m_flexcan_config;
 
     return status;
 }
@@ -71,12 +71,12 @@ void get_default_config_info(void) {
     m_lpuart0_config.rxmode = 0;
     m_lpuart0_config.txmode = 0;
 
-    m_flexcan_config.m_flexcan_user_config = canCom0_InitConfig0;
-    m_flexcan_config.rxmode = 0;
-    m_flexcan_config.txmode = 0;
-    m_flexcan_config.rx_id = 0x00;
-    m_flexcan_config.tx_id = 0x00;
-    m_flexcan_config.id_mask = 0x00;
+    g_m_flexcan_config.m_flexcan_user_config = canCom0_InitConfig0;
+    g_m_flexcan_config.rxmode = 0;
+    g_m_flexcan_config.txmode = 0;
+    g_m_flexcan_config.rx_id = 0x00;
+    g_m_flexcan_config.tx_id = 0x00;
+    g_m_flexcan_config.id_mask = 0x00;
 }
 
 /**
