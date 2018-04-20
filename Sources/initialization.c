@@ -49,7 +49,7 @@ status_t get_parameters_from_EEPROM(void){
 
     CRC_DRV_Init(INST_CRC, &crc_InitConfig0);
     CRC_DRV_WriteData(INST_CRC, (uint8_t*)config_parameter,
-            sizeof(m_lpuart0_config) + sizeof(g_m_flexcan_config));
+            sizeof(g_m_lpuart0_config) + sizeof(g_m_flexcan_config));
     crcret = CRC_DRV_GetCrcResult(INST_CRC);
 
     if (crcret != config_parameter->crc) {
@@ -57,7 +57,7 @@ status_t get_parameters_from_EEPROM(void){
         return status;
     }
 
-    m_lpuart0_config = config_parameter->m_lpuart_config;
+    g_m_lpuart0_config = config_parameter->m_lpuart_config;
     g_m_flexcan_config = config_parameter->m_flexcan_config;
 
     return status;
@@ -67,9 +67,9 @@ status_t get_parameters_from_EEPROM(void){
  * \brief   ªÒ»°ƒ¨»œ≈‰÷√
  */
 void get_default_config_info(void) {
-    m_lpuart0_config.lpuart0_user_config = g_lpuart_default_UserConfig;
-    m_lpuart0_config.rxmode = 0;
-    m_lpuart0_config.txmode = 0;
+    g_m_lpuart0_config.lpuart0_user_config = g_lpuart_default_UserConfig;
+    g_m_lpuart0_config.rxmode = 0;
+    g_m_lpuart0_config.txmode = 0;
 
     g_m_flexcan_config.m_flexcan_user_config = canCom0_InitConfig0;
     g_m_flexcan_config.rxmode = 0;
@@ -107,7 +107,7 @@ void init_all(void) {
     init_pins();
     get_parameters();
     init_flexcan();
-    LPUART0_init(&m_lpuart0_config.lpuart0_user_config);
+    LPUART0_init(&g_m_lpuart0_config.lpuart0_user_config);
     key_init();
     led_init();
 //    LPUART0_transmit_string((int8_t *)init_ok);
@@ -119,6 +119,6 @@ void init_all(void) {
 void set_to_default_config(void) {
     get_default_config_info();
     init_flexcan();
-    LPUART0_init(&m_lpuart0_config.lpuart0_user_config);
+    LPUART0_init(&g_m_lpuart0_config.lpuart0_user_config);
     save_config_paramater_to_EEPROM();
 }

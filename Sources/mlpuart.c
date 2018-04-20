@@ -19,10 +19,9 @@ uint8_t g_uart_rx_buff[USART_REC_LEN];     //接收缓冲,最大USART_REC_LEN个字节.
 uint16_t g_uart_rx_sta=0;
 
 
-m_lpuart_config_t m_lpuart0_config;
-fifo_t lpuart_rx_fifo;
-lpuart_rx_frame_t lpuart_rx_base[1024];
-uint8_t lpuart_rx_len = 0;
+fifo_t              g_lpuart_rx_fifo;
+lpuart_rx_frame_t   __g_lpuart_rx_base[1024];
+uint8_t             lpuart_rx_len = 0;
 
 lpuart0_irq_callback_t __gfn_lpuart0_irq_callback = NULL;
 
@@ -40,13 +39,13 @@ const lpuart_user_config_t g_lpuart_default_UserConfig = {
 
 void lpuart_RX_callback_transparent_transmission()
 {
-    switch(m_lpuart0_config.rxmode) {
+    switch(g_m_lpuart0_config.rxmode) {
     case 0:
     {
         if (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_RX_DATA_REG_FULL)) {
             while ((LPUART0->FIFO & LPUART_FIFO_RXEMPT_MASK) == 0) {
                 lpuart_rx_frame_t *frame;
-                if (fifo_get_rear_pointer(&lpuart_rx_fifo, (void**)&frame) != STATUS_SUCCESS) {
+                if (fifo_get_rear_pointer(&g_lpuart_rx_fifo, (void**)&frame) != STATUS_SUCCESS) {
                     GPIO_HAL_ClearPins(PTC, 1<<11);
                     return;
                 }
@@ -56,18 +55,18 @@ void lpuart_RX_callback_transparent_transmission()
                 if (lpuart_rx_len == 8) {
                     lpuart_rx_len = 0;
                     frame->descriptor = 0x08;
-                    fifo_append(&lpuart_rx_fifo);
+                    fifo_append(&g_lpuart_rx_fifo);
                 }
             }
         } else if (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_IDLE_LINE_DETECT)) {
             lpuart_rx_frame_t *frame;
-            if (fifo_get_rear_pointer(&lpuart_rx_fifo, (void**)&frame) != STATUS_SUCCESS) {
+            if (fifo_get_rear_pointer(&g_lpuart_rx_fifo, (void**)&frame) != STATUS_SUCCESS) {
                 GPIO_HAL_ClearPins(PTC, 1<<11);
                 return;
             }
             frame->descriptor = lpuart_rx_len|0x80;
             lpuart_rx_len = 0;
-            fifo_append(&lpuart_rx_fifo);
+            fifo_append(&g_lpuart_rx_fifo);
             GPIO_HAL_SetPins(PTC, 1<<12);
             LPUART_HAL_ClearStatusFlag(LPUART0, LPUART_IDLE_LINE_DETECT);
         }
@@ -124,7 +123,7 @@ status_t LPUART0_init(lpuart_user_config_t *lpuartUserConfig)
 {
     status_t statu;
     uint32_t lpuartSourceClock;
-    fifo_init(&lpuart_rx_fifo, lpuart_rx_base, 1024, sizeof(lpuart_rx_frame_t));
+    fifo_init(&g_lpuart_rx_fifo, __g_lpuart_rx_base, 1024, sizeof(lpuart_rx_frame_t));
 
     (void)CLOCK_SYS_GetFreq(PCC_LPUART0_CLOCK, &lpuartSourceClock);
 
@@ -184,155 +183,6 @@ void LPUART0_RxTx_IRQHandler()
     }
 }
 
-/**
- * \brief   打印参数配置结果
- * \param   device_item_index   设备项编号
- * \param   config_item_index   配置项编号
- * \param   status_item_index   状态项编号
- */
-void LPUART0_print_option_status(device_item_index_t device_item_index,
-                                 config_item_index_t config_item_index,
-                                 statu_item_t        status_item_index)
-{
-    LPUART0_transmit_string("Set ");
-    LPUART0_transmit_string(g_config_item[config_item_index]);
-    LPUART0_transmit_char(' ');
-    LPUART0_transmit_string(g_statu_item[status_item_index]);
-    LPUART0_transmit_string("\r\n");
-}
-
-/**
- * \brief   通过串口配置串口参数
- * \param   config_item_index   配置项编号
- * \param   parameter[in]       参数(数字字符串)
- * \param   parameter_len       参数字符串长度
- */
-void config_lpuart_by_lpuart(uint8_t    config_item_index,
-                             uint8_t   *p_parameter,
-                             uint16_t   parameter_len)
-{
-    while((LPUART0->STAT & LPUART_STAT_TDRE_MASK) == 0);    /* 等待缓冲区中的数据发送完成 */
-    switch(config_item_index) {
-    case BAUD_index:            /* 修改串口波特率; */
-    {
-        uint32_t baud;
-        if(string2number(p_parameter, &baud) == STATUS_SUCCESS &&
-                LPUART0_set_baud(baud) == STATUS_SUCCESS) {
-        } else {
-            LPUART0_print_option_status(U_index, BAUD_index, ERROR_index);
-        }
-        break;
-    }
-    case stopBitCount_index:    /* 修改串口停止位位数; */
-    {
-        uint32_t stopbit;
-        if(string2number(p_parameter, &stopbit) == STATUS_SUCCESS
-                && (stopbit == LPUART_ONE_STOP_BIT
-                    || stopbit == LPUART_TWO_STOP_BIT)){
-
-            LPUART_HAL_SetStopBitCount(LPUART0, LPUART_ONE_STOP_BIT);
-            m_lpuart0_config.lpuart0_user_config.stopBitCount = stopbit;
-            LPUART0_print_option_status(U_index, stopBitCount_index, OK_index);
-        } else {
-            LPUART0_print_option_status(U_index, stopBitCount_index, ERROR_index);
-        }
-        break;
-    }
-    case PARI_index:            /* 修改串口校验类型; */
-    {
-        uint32_t pari;
-        if(string2number(p_parameter, &pari) == STATUS_SUCCESS
-                && (pari == LPUART_PARITY_DISABLED
-                    || pari == LPUART_PARITY_EVEN
-                    || pari == LPUART_PARITY_ODD)){
-
-            LPUART_HAL_SetParityMode(LPUART0, pari);
-            m_lpuart0_config.lpuart0_user_config.parityMode = pari;
-            LPUART0_print_option_status(U_index, PARI_index, OK_index);
-        } else {
-            LPUART0_print_option_status(U_index, PARI_index, ERROR_index);
-        }
-        break;
-    }
-    case NOTERR_index:
-        break;
-    case START_index:           /* 退出参数配置模式; */
-        change_mode();
-        break;
-    case TMODE_index:           /* 修改串口输出模式; */
-    {
-        uint32_t txmode;
-        if(string2number(p_parameter, &txmode) == STATUS_SUCCESS
-            && (txmode == 0
-                || txmode == 1)){
-            m_lpuart0_config.txmode = txmode;
-            LPUART0_print_option_status(U_index, TMODE_index, OK_index);
-        } else {
-            LPUART0_print_option_status(U_index, TMODE_index, ERROR_index);
-        }
-        break;
-    }
-    case RMODE_index:           /* 修改串口输入模式; */
-    {
-        uint32_t rxmode;
-        if(string2number(p_parameter, &rxmode) == STATUS_SUCCESS
-            && (rxmode == 0
-                || rxmode == 1)){
-            m_lpuart0_config.txmode = rxmode;
-            LPUART0_print_option_status(U_index, RMODE_index, OK_index);
-        } else {
-            LPUART0_print_option_status(U_index, RMODE_index, ERROR_index);
-        }
-        break;
-    }
-    default:
-        break;
-    }
-}
-
-void LPUART0_print_config_parameter(device_item_index_t device_item_index,
-                                    config_item_index_t config_item_index,
-                                    uint32_t            parameter)
-{
-    LPUART0_transmit_string(g_device_item[device_item_index]);
-    LPUART0_transmit_string(g_config_item[config_item_index]);
-    LPUART0_transmit_char(':');
-    LPUART_transmit_number(LPUART0, parameter);
-    LPUART0_transmit_string("\r\n");
-}
-
-void LPUART0_print_lpuart_info(uint8_t config_item_index)
-{
-    switch(config_item_index) {
-    case BAUD_index:            /* 打印串口波特率; */
-        LPUART0_print_config_parameter(U_index, BAUD_index,
-                m_lpuart0_config.lpuart0_user_config.baudRate);
-        break;
-    case stopBitCount_index:    /* 打印串口停止位位数; */
-        LPUART0_print_config_parameter(U_index, stopBitCount_index,
-                m_lpuart0_config.lpuart0_user_config.stopBitCount);
-        break;
-    case PARI_index:            /* 打印串口校验方式; */
-        LPUART0_print_config_parameter(U_index, PARI_index,
-                m_lpuart0_config.lpuart0_user_config.parityMode);
-        break;
-    case NOTERR_index:
-        break;
-    case START_index:
-        change_mode();
-        break;
-    case TMODE_index:           /* 打印串口发送模式; */
-        LPUART0_print_config_parameter(U_index, TMODE_index,
-                m_lpuart0_config.txmode);
-        break;
-    case RMODE_index:           /* 打印串口接收模式. */
-        LPUART0_print_config_parameter(U_index, RMODE_index,
-                m_lpuart0_config.rxmode);
-        break;
-    default:
-        break;
-    }
-}
 
 /**
  * \brief   设置串口波特率
@@ -345,7 +195,7 @@ status_t LPUART0_set_baud(uint32_t baud)
     CLOCK_SYS_GetFreq(PCC_LPUART0_CLOCK, &lpuartSourceClock);
     status = LPUART_HAL_SetBaudRate(LPUART0, lpuartSourceClock, baud);
     if(status == STATUS_SUCCESS) {
-        m_lpuart0_config.lpuart0_user_config.baudRate = baud;
+        g_m_lpuart0_config.lpuart0_user_config.baudRate = baud;
     }
     return status;
 }

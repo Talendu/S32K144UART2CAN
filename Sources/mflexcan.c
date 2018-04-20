@@ -9,7 +9,6 @@
 flexcan_msgbuff_t g_can_receive_buff;
 uint8_t           g_lpuart_receive_buff[8];
 
-m_flexcan_config_t g_m_flexcan_config;
 
 /**
  * \brief   发送邮箱配置信息
@@ -45,7 +44,7 @@ fifo_t g_flexcan_rx_fifo;
 FLEXCAN_RX_DATA_TYPE __g_flexcan_rx_base[__FLEXCAN_RX_FIFO_SIZE];
 
 
-status_t flexcan_set_baud(uint8_t *p_parameter);
+status_t flexcan_set_baud(const uint8_t *p_parameter);
 
 /**
  * \brief   透明传输模式CAN接收回掉函数
@@ -91,7 +90,7 @@ void can_callback_transmission(uint8_t               instance,
  */
 void can_callback_config(uint8_t               instance,
                          flexcan_event_type_t  eventType,
-                         struct FlexCANState  *state)
+                          struct FlexCANState  *state)
 {
     GPIO_HAL_TogglePins(PTC, 1<<12);
 
@@ -133,165 +132,6 @@ void init_flexcan(void)
 }
 
 /**
- * \brief   通过串口配置参数
- *
- * \param   config_item_index   配置项编号
- * \param   p_parameter[in]     参数(数字字符串)
- * \param   parameter_len       参数长度
- */
-void LPUART0_config_can_by(config_item_index_t  config_item_index,
-                           uint8_t             *p_parameter,
-                           uint16_t             parameter_len)
-{
-    switch(config_item_index) {
-    case BAUD_index:
-    {
-        if (flexcan_set_baud(p_parameter) == STATUS_SUCCESS) {
-            LPUART0_print_option_status(C_index, BAUD_index, OK_index);
-        } else {
-            LPUART0_print_option_status(C_index, BAUD_index, ERROR_index);
-        }
-        break;
-    }
-    case TMODE_index:
-    {
-        uint32_t tmode = 0;
-        if(string2number(p_parameter, &tmode) == STATUS_SUCCESS
-                && (tmode == 0
-                    || tmode == 1
-                    || tmode == 2)){
-            g_m_flexcan_config.txmode = tmode;
-            LPUART0_print_option_status(C_index, PARI_index, OK_index);
-        } else {
-            LPUART0_print_option_status(C_index, PARI_index, ERROR_index);
-        }
-        break;
-    }
-    case RMODE_index:
-    {
-        uint32_t rmode = 0;
-        if(string2number(p_parameter, &rmode) == STATUS_SUCCESS
-                && (rmode == 0
-                    || rmode == 1
-                    || rmode == 2)){
-            g_m_flexcan_config.rxmode = rmode;
-            LPUART0_print_option_status(C_index, RMODE_index, OK_index);
-        } else {
-            LPUART0_print_option_status(C_index, RMODE_index, ERROR_index);
-        }
-        break;
-    }
-    case TXID_index:
-    {
-        uint32_t txid = 0;
-        if(string2number(p_parameter, &txid) == STATUS_SUCCESS){
-            if (g_m_flexcan_config.txmode == 0) {             /* 发送模式0 */
-                txid &= CAN_ID_STD_MASK>>CAN_ID_STD_SHIFT;  /* 标准帧ID */
-            } else if (g_m_flexcan_config.txmode == 1) {      /* 发送模式1 */
-                txid &= CAN_ID_EXT_MASK;                    /* 扩展帧ID */
-            } else if (g_m_flexcan_config.txmode == 2) {      /* 发送模式2 */
-                if ((txid&CAN_ID_EXT_MASK) > 0x7ff) {         /* 根据ID选择发送帧的模式, */
-                    txid &= CAN_ID_EXT_MASK;                /* ID超过标准帧ID范围. */
-                } else {
-                    txid &= CAN_ID_STD_MASK>>CAN_ID_STD_SHIFT;
-                }
-            }
-            g_m_flexcan_config.tx_id = txid;
-            LPUART0_print_option_status(C_index, TXID_index, OK_index);
-        } else {
-            LPUART0_print_option_status(C_index, TXID_index, ERROR_index);
-        }
-        break;
-    }
-    case RXID_index:
-    {
-        uint32_t rxid = 0;
-        if(string2number(p_parameter, &rxid) == STATUS_SUCCESS){
-            if (g_m_flexcan_config.rxmode == 0) {             /* 发送模式0 */
-                rxid &= CAN_ID_STD_MASK>>CAN_ID_STD_SHIFT;  /* 标准帧ID */
-                FLEXCAN_DRV_ConfigRxMb(INST_CANCOM0, RECEIVE_STD_MB,
-                        &g_rx_info, rxid);
-            } else if (g_m_flexcan_config.rxmode == 1) {      /* 发送模式1 */
-                rxid &= CAN_ID_EXT_MASK;                    /* 扩展帧ID */
-                FLEXCAN_DRV_ConfigRxMb(INST_CANCOM0, RECEIVE_EXT_MB,
-                        &g_rx_info, rxid);
-            } else if (g_m_flexcan_config.rxmode == 2) {      /* 发送模式2 */
-                if ((rxid&CAN_ID_EXT_MASK) > 0x7ff) {   /* 根据ID选择发送帧的模式, */
-                    rxid &= CAN_ID_EXT_MASK;            /* ID超过标准帧ID范围. */
-                    FLEXCAN_DRV_ConfigRxMb(INST_CANCOM0, RECEIVE_EXT_MB,
-                            &g_rx_info, rxid);
-                } else {
-                    rxid &= CAN_ID_STD_MASK>>CAN_ID_STD_SHIFT;
-                    FLEXCAN_DRV_ConfigRxMb(INST_CANCOM0, RECEIVE_STD_MB,
-                            &g_rx_info, rxid);
-                }
-            }
-            g_m_flexcan_config.rx_id = rxid;
-            LPUART0_print_option_status(C_index, RXID_index, OK_index);
-        } else {
-            LPUART0_print_option_status(C_index, RXID_index, ERROR_index);
-        }
-        break;
-    }
-    case IDMASK_index:
-    {
-        uint32_t idmask = 0;
-        if(string2number(p_parameter, &idmask) == STATUS_SUCCESS){
-            idmask &= CAN_ID_EXT_MASK;
-            g_m_flexcan_config.id_mask = idmask;
-            FLEXCAN_DRV_SetRxMbGlobalMask(INST_CANCOM0, FLEXCAN_MSG_ID_EXT,
-                    g_m_flexcan_config.id_mask);
-            LPUART0_print_option_status(C_index, IDMASK_index, OK_index);
-        } else {
-            LPUART0_print_option_status(C_index, IDMASK_index, ERROR_index);
-        }
-        break;
-    }
-    default:
-        break;
-    }
-}
-
-/**
- * \brief       从串口打印参数
- * \param[in]   config_item_index   参数在参数数组中的位置
- *                                  请参考 config_item_index_t 和 config_item
- */
-void LPUART0_print_can_config_by(config_item_index_t config_item_index)
-{
-    switch(config_item_index) {
-    case BAUD_index:
-    {
-        uint32_t baud = 0;
-        flexcan_time_segment_t *bitrate = &g_m_flexcan_config.m_flexcan_user_config.bitrate;
-        uint32_t flexcanSourceClock;
-        flexcan_get_source_clock(&flexcanSourceClock);
-        baud = flexcanSourceClock/(bitrate->preDivider+1)/
-                (bitrate->propSeg + bitrate->phaseSeg1 + bitrate->phaseSeg2 + 4);
-        LPUART0_print_config_parameter(C_index, BAUD_index, baud);
-        break;
-    }
-    case TMODE_index:
-        LPUART0_print_config_parameter(C_index, TMODE_index, g_m_flexcan_config.txmode);
-        break;
-    case RMODE_index:
-        LPUART0_print_config_parameter(C_index, RMODE_index, g_m_flexcan_config.rxmode);
-        break;
-    case TXID_index:
-        LPUART0_print_config_parameter(C_index, TXID_index, g_m_flexcan_config.tx_id);
-        break;
-    case RXID_index:
-        LPUART0_print_config_parameter(C_index, RXID_index, g_m_flexcan_config.rx_id);
-        break;
-    case IDMASK_index:
-        LPUART0_print_config_parameter(C_index, IDMASK_index, g_m_flexcan_config.id_mask);
-        break;
-    default:
-        break;
-    }
-}
-
-/**
  * \brief       获取can0时钟频率
  * \param[out]  p_flexcanSourceClock[out]   时钟频率
  */
@@ -314,7 +154,7 @@ void flexcan_get_source_clock(uint32_t *p_flexcanSourceClock)
  * \retval  修改成功返回: STATUS_SUCCESS
  *          修改失败返回: DTATUS_ERROR
  */
-status_t flexcan_set_baud(uint8_t *p_parameter)
+status_t flexcan_set_baud(const uint8_t *p_parameter)
 {
     uint32_t baud;
 

@@ -19,20 +19,8 @@
 #include "mflexcan.h"
 #include "mflash.h"
 #include "crc.h"
+#include "config.h"
 
-
-#define CONFIG_INFO_OFFSET 0
-
-
-/**
- * \brief   配置信息存储结构
- * \note    配置信息将以该结构存储在EEPROM中
- */
-typedef struct {
-    m_lpuart_config_t m_lpuart_config;
-    m_flexcan_config_t m_flexcan_config;
-    uint16_t crc;
-}config_info_t;
 
 /**
  * \brief   初始化系统
