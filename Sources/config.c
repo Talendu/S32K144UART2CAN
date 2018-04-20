@@ -7,13 +7,13 @@
 #include "config.h"
 
 
-const char *g_device_item[DEVICE_CODES_COUNT] = {
+const char *g_device_item[DEVICE_ITEM_COUNT] = {
     "@U",       /* 代表后面的内容是配置串口 */
     "@C",       /* 代表后面的内容是配置CAN */
     "@O",       /* 代表后面的内容是配置其他 */
 };
 
-const char *g_config_item[CONFIG_CODES_COUNT] = {
+const char *g_config_item[CONFIG_ITEM_COUNT] = {
         "AT",
         "+",
         "=",
@@ -33,7 +33,7 @@ const char *g_config_item[CONFIG_CODES_COUNT] = {
         "IDMASK",   /* 接收ID屏蔽码 */
 };
 
-const char *g_statu_item[STATU_CODES_COUNT] = {
+const char *g_statu_item[STATU_ITEM_COUNT] = {
         "OK",
         "ERROR"
 };
@@ -45,6 +45,7 @@ m_flexcan_config_t g_m_flexcan_config;
 
 /*
  * \brief   通过串口配置或则打印参数
+ *
  * \note    指令格式 AT[+(item)[=(value)]]
  */
 void config_by_lpuart(void) {
@@ -74,14 +75,14 @@ void config_by_lpuart(void) {
         if (g_uart_rx_buff[index] == '@') {           /* +后面是@ */
             index += 2;                             /* 向后移动两位是指令描述符 */
         }                                           /* 否则不加 */
-        for (i=3; i<CONFIG_CODES_COUNT; i++) {      /* 循环查找指令 */
+        for (i=3; i<CONFIG_ITEM_COUNT; i++) {      /* 循环查找指令 */
             uint8_t config_code_len = strlen(g_config_item[i]);
             if(memcmp(g_uart_rx_buff+index, g_config_item[i], config_code_len) == 0) {
                 index += config_code_len;           /* 下一个判定字符位置 */
                 break;                              /* 如果指令匹配,跳出循环 */
             }
         }
-        if (i == CONFIG_CODES_COUNT) { /* i=CONFIG_CODES_COUNT说明没有匹配的指令 */
+        if (i == CONFIG_ITEM_COUNT) { /* i=CONFIG_CODES_COUNT说明没有匹配的指令 */
             g_uart_rx_sta = 0;
             return;
         }
@@ -106,7 +107,7 @@ void config_by_lpuart(void) {
                     /* 将参数保存到EEPROM */
                     save_config_paramater_to_EEPROM();
                 } else {
-                    LPUART0_print_can_config(i);
+                    LPUART0_print_can_info(i);
                 }
             } else {
                 g_uart_rx_sta = 0;
@@ -132,10 +133,12 @@ void save_config_paramater_to_EEPROM() {
                 .m_lpuart_config = g_m_lpuart0_config,
                 .m_flexcan_config = g_m_flexcan_config
         };
+
         CRC_DRV_Deinit(INST_CRC);
         CRC_DRV_Init(INST_CRC, &crc_InitConfig0);
         CRC_DRV_WriteData(INST_CRC, (uint8_t *)&paramater,
                 sizeof(g_m_lpuart0_config) + sizeof(g_m_flexcan_config));
+
         paramater.crc = CRC_DRV_GetCrcResult(INST_CRC);
         flash_write_EEPROM(CONFIG_INFO_OFFSET, (uint8_t *)&paramater, sizeof(paramater));
     }
@@ -144,11 +147,12 @@ void save_config_paramater_to_EEPROM() {
 
 /**
  * \brief   打印参数配置结果
+ *
  * \param   device_item_index   设备项编号
  * \param   config_item_index   配置项编号
  * \param   status_item_index   状态项编号
  */
-void LPUART0_print_option_status(device_item_index_t device_item_index,
+void LPUART0_print_option_result(device_item_index_t device_item_index,
                                  config_item_index_t config_item_index,
                                  statu_item_t        status_item_index)
 {
@@ -161,6 +165,7 @@ void LPUART0_print_option_status(device_item_index_t device_item_index,
 
 /**
  * \brief   通过串口配置串口参数
+ *
  * \param   config_item_index   配置项编号
  * \param   parameter[in]       参数(数字字符串)
  * \param   parameter_len       参数字符串长度
@@ -177,7 +182,7 @@ void config_lpuart_by_lpuart(uint8_t    config_item_index,
         if(string2number(p_parameter, &baud) == STATUS_SUCCESS &&
                 LPUART0_set_baud(baud) == STATUS_SUCCESS) {
         } else {
-            LPUART0_print_option_status(U_index, BAUD_index, ERROR_index);
+            LPUART0_print_option_result(U_index, BAUD_index, ERROR_index);
         }
         break;
     }
@@ -190,9 +195,9 @@ void config_lpuart_by_lpuart(uint8_t    config_item_index,
 
             LPUART_HAL_SetStopBitCount(LPUART0, LPUART_ONE_STOP_BIT);
             g_m_lpuart0_config.lpuart0_user_config.stopBitCount = stopbit;
-            LPUART0_print_option_status(U_index, stopBitCount_index, OK_index);
+            LPUART0_print_option_result(U_index, stopBitCount_index, OK_index);
         } else {
-            LPUART0_print_option_status(U_index, stopBitCount_index, ERROR_index);
+            LPUART0_print_option_result(U_index, stopBitCount_index, ERROR_index);
         }
         break;
     }
@@ -206,9 +211,9 @@ void config_lpuart_by_lpuart(uint8_t    config_item_index,
 
             LPUART_HAL_SetParityMode(LPUART0, pari);
             g_m_lpuart0_config.lpuart0_user_config.parityMode = pari;
-            LPUART0_print_option_status(U_index, PARI_index, OK_index);
+            LPUART0_print_option_result(U_index, PARI_index, OK_index);
         } else {
-            LPUART0_print_option_status(U_index, PARI_index, ERROR_index);
+            LPUART0_print_option_result(U_index, PARI_index, ERROR_index);
         }
         break;
     }
@@ -224,9 +229,9 @@ void config_lpuart_by_lpuart(uint8_t    config_item_index,
             && (txmode == 0
                 || txmode == 1)){
             g_m_lpuart0_config.txmode = txmode;
-            LPUART0_print_option_status(U_index, TMODE_index, OK_index);
+            LPUART0_print_option_result(U_index, TMODE_index, OK_index);
         } else {
-            LPUART0_print_option_status(U_index, TMODE_index, ERROR_index);
+            LPUART0_print_option_result(U_index, TMODE_index, ERROR_index);
         }
         break;
     }
@@ -237,9 +242,9 @@ void config_lpuart_by_lpuart(uint8_t    config_item_index,
             && (rxmode == 0
                 || rxmode == 1)){
             g_m_lpuart0_config.txmode = rxmode;
-            LPUART0_print_option_status(U_index, RMODE_index, OK_index);
+            LPUART0_print_option_result(U_index, RMODE_index, OK_index);
         } else {
-            LPUART0_print_option_status(U_index, RMODE_index, ERROR_index);
+            LPUART0_print_option_result(U_index, RMODE_index, ERROR_index);
         }
         break;
     }
@@ -248,6 +253,15 @@ void config_lpuart_by_lpuart(uint8_t    config_item_index,
     }
 }
 
+/**
+ * \brief   按一定格式打印参数打印参数
+ *
+ * \details 设备+命令+":"+参数
+ *
+ * \param   device_item_index   设备在数组中的位置(如@C是代表CAN)
+ * \param   config_item_index   配置项在数组中的位置
+ * \param   parameter           参数
+ */
 void LPUART0_print_config_parameter(device_item_index_t device_item_index,
                                     config_item_index_t config_item_index,
                                     uint32_t            parameter)
@@ -259,6 +273,11 @@ void LPUART0_print_config_parameter(device_item_index_t device_item_index,
     LPUART0_transmit_string("\r\n");
 }
 
+/**
+ * \brief   打印串口参数中对应的参数
+ *
+ * \param   config_item_index   命令在数组中的位置
+ */
 void LPUART0_print_lpuart_info(uint8_t config_item_index)
 {
     switch(config_item_index) {
@@ -302,16 +321,16 @@ void LPUART0_print_lpuart_info(uint8_t config_item_index)
  * \param   parameter_len       参数长度
  */
 void LPUART0_config_can(config_item_index_t  config_item_index,
-                           uint8_t             *p_parameter,
-                           uint16_t             parameter_len)
+                           uint8_t          *p_parameter,
+                           uint16_t          parameter_len)
 {
     switch(config_item_index) {
     case BAUD_index:
     {
         if (flexcan_set_baud(p_parameter) == STATUS_SUCCESS) {
-            LPUART0_print_option_status(C_index, BAUD_index, OK_index);
+            LPUART0_print_option_result(C_index, BAUD_index, OK_index);
         } else {
-            LPUART0_print_option_status(C_index, BAUD_index, ERROR_index);
+            LPUART0_print_option_result(C_index, BAUD_index, ERROR_index);
         }
         break;
     }
@@ -323,9 +342,9 @@ void LPUART0_config_can(config_item_index_t  config_item_index,
                     || tmode == 1
                     || tmode == 2)){
             g_m_flexcan_config.txmode = tmode;
-            LPUART0_print_option_status(C_index, PARI_index, OK_index);
+            LPUART0_print_option_result(C_index, PARI_index, OK_index);
         } else {
-            LPUART0_print_option_status(C_index, PARI_index, ERROR_index);
+            LPUART0_print_option_result(C_index, PARI_index, ERROR_index);
         }
         break;
     }
@@ -337,9 +356,9 @@ void LPUART0_config_can(config_item_index_t  config_item_index,
                     || rmode == 1
                     || rmode == 2)){
             g_m_flexcan_config.rxmode = rmode;
-            LPUART0_print_option_status(C_index, RMODE_index, OK_index);
+            LPUART0_print_option_result(C_index, RMODE_index, OK_index);
         } else {
-            LPUART0_print_option_status(C_index, RMODE_index, ERROR_index);
+            LPUART0_print_option_result(C_index, RMODE_index, ERROR_index);
         }
         break;
     }
@@ -359,9 +378,9 @@ void LPUART0_config_can(config_item_index_t  config_item_index,
                 }
             }
             g_m_flexcan_config.tx_id = txid;
-            LPUART0_print_option_status(C_index, TXID_index, OK_index);
+            LPUART0_print_option_result(C_index, TXID_index, OK_index);
         } else {
-            LPUART0_print_option_status(C_index, TXID_index, ERROR_index);
+            LPUART0_print_option_result(C_index, TXID_index, ERROR_index);
         }
         break;
     }
@@ -389,9 +408,9 @@ void LPUART0_config_can(config_item_index_t  config_item_index,
                 }
             }
             g_m_flexcan_config.rx_id = rxid;
-            LPUART0_print_option_status(C_index, RXID_index, OK_index);
+            LPUART0_print_option_result(C_index, RXID_index, OK_index);
         } else {
-            LPUART0_print_option_status(C_index, RXID_index, ERROR_index);
+            LPUART0_print_option_result(C_index, RXID_index, ERROR_index);
         }
         break;
     }
@@ -403,9 +422,9 @@ void LPUART0_config_can(config_item_index_t  config_item_index,
             g_m_flexcan_config.id_mask = idmask;
             FLEXCAN_DRV_SetRxMbGlobalMask(INST_CANCOM0, FLEXCAN_MSG_ID_EXT,
                     g_m_flexcan_config.id_mask);
-            LPUART0_print_option_status(C_index, IDMASK_index, OK_index);
+            LPUART0_print_option_result(C_index, IDMASK_index, OK_index);
         } else {
-            LPUART0_print_option_status(C_index, IDMASK_index, ERROR_index);
+            LPUART0_print_option_result(C_index, IDMASK_index, ERROR_index);
         }
         break;
     }
@@ -416,20 +435,17 @@ void LPUART0_config_can(config_item_index_t  config_item_index,
 
 /**
  * \brief       从串口打印参数
+ *
  * \param[in]   config_item_index   参数在参数数组中的位置
  *                                  请参考 config_item_index_t 和 config_item
  */
-void LPUART0_print_can_config(config_item_index_t config_item_index)
+void LPUART0_print_can_info(config_item_index_t config_item_index)
 {
     switch(config_item_index) {
     case BAUD_index:
     {
         uint32_t baud = 0;
-        flexcan_time_segment_t *bitrate = &g_m_flexcan_config.m_flexcan_user_config.bitrate;
-        uint32_t flexcanSourceClock;
-        flexcan_get_source_clock(&flexcanSourceClock);
-        baud = flexcanSourceClock/(bitrate->preDivider+1)/
-                (bitrate->propSeg + bitrate->phaseSeg1 + bitrate->phaseSeg2 + 4);
+        baud = flexcan_get_baud();
         LPUART0_print_config_parameter(C_index, BAUD_index, baud);
         break;
     }

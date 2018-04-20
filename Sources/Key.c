@@ -5,20 +5,7 @@
  *      Author: Du
  */
 
-/* User include */
 #include "Key.h"
-#include "pcc_hal.h"
-#include "port_hal.h"
-#include "gpio_hal.h"
-#include "interrupt_manager.h"
-#include "osif.h"
-
-#include "mainloop.h"
-#include "initialization.h"
-
-/* End of user include */
-
-/* Functions definition */
 
 /**
  * \brief   °´¼üIO³õÊ¼»¯
@@ -74,4 +61,3 @@ void PORTE_IRQHandler()
         press_ticks = OSIF_GetMilliseconds();
     }
 }
-/* End of functions definition */

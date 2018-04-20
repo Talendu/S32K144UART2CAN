@@ -5,25 +5,6 @@
  *      Author: Administrator
  */
 #include "mainloop.h"
-#include "clockMan1.h"
-#include "canCom0.h"
-#include "pin_mux.h"
-#include "dmaController0.h"
-#include "osif.h"
-#include "Key.h"
-#include "config.h"
-#include "mlpuart.h"
-#include "mflexcan.h"
-#include "string.h"
-#include "crc.h"
-#include "mflash.h"
-#include "initialization.h"
-
-/**
- * 0:串口透传模式
- * 1:参数配置模式
- */
-uint8_t mode = 0;
 
 static void transparent_transmission(void);
 static void lpuart_to_can(void);
@@ -35,9 +16,9 @@ static void can_to_lpuart(void);
 void mainloop(void) {
     change_mode();
     while(1) {
-        if (mode == 0) {
+        if (get_system_mode() == 0) {
             transparent_transmission();
-        } else if (mode ==1) {
+        } else if (get_system_mode() ==1) {
             config_by_lpuart();
         }
     }
@@ -88,19 +69,3 @@ static void transparent_transmission(void) {
     can_to_lpuart();
 }
 
-/*
- * \brief   改变工作模式, 透传模式或者配置模式
- */
-void change_mode() {
-    if (mode == 0) {
-        mode = 1;
-        GPIO_HAL_ClearPins(PTC, 1<<12);
-        LPUART_InstallRxCallback(lpuart_RX_callback_configuration_parameters);
-        FLEXCAN_DRV_InstallEventCallback(0, can_callback_config, NULL);
-    } else {
-        mode = 0;
-        GPIO_HAL_SetPins(PTC, 1<<12);
-        LPUART_InstallRxCallback(lpuart_RX_callback_transparent_transmission);
-        FLEXCAN_DRV_InstallEventCallback(0, can_callback_transmission, NULL);
-    }
-}

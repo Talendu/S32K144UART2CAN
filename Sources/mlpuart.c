@@ -7,21 +7,22 @@
 
 #include "mlpuart.h"
 
-#define USART_REC_LEN 32
-uint8_t g_uart_rx_buff[USART_REC_LEN];     //接收缓冲,最大USART_REC_LEN个字节.
+#define __LPUART_FIFO_SIZE  1024         /**< \brief 透传模式,串口接收缓冲区大小 */
+#define __LPUSART_REC_LEN   32           /**< \brief 配置模式,串口接收缓冲区大小 */
 
-/*
- * 接收状态
- * bit15，    接收完成标志
- * bit14，    接收到0x0d
- * bit13~0，  接收到的有效字节数目
+
+uint8_t           g_uart_rx_buff[__LPUSART_REC_LEN];        /**< \brief 接收缓冲,最大USART_REC_LEN个字节. */
+lpuart_rx_frame_t __g_lpuart_rx_base[__LPUART_FIFO_SIZE];   /**< \brief 透传模式接收缓冲区内存块 */
+
+/**
+ * \brief   接收状态
+ * bit15    接收完成标志
+ * bit14    接收到0x0d
+ * bit13~0  接收到的有效字节数目
  */
-uint16_t g_uart_rx_sta=0;
-
-
-fifo_t              g_lpuart_rx_fifo;
-lpuart_rx_frame_t   __g_lpuart_rx_base[1024];
-uint8_t             lpuart_rx_len = 0;
+uint16_t   g_uart_rx_sta=0;
+fifo_t     g_lpuart_rx_fifo;
+uint8_t    lpuart_rx_len = 0;
 
 lpuart0_irq_callback_t __gfn_lpuart0_irq_callback = NULL;
 
@@ -35,17 +36,20 @@ const lpuart_user_config_t g_lpuart_default_UserConfig = {
         .txDMAChannel = 0
 };
 
-
-
-void lpuart_RX_callback_transparent_transmission()
+/**
+ * \brief   透明传输串口中断回掉函数
+ */
+void lpuart_RX_callback_transmission()
 {
     switch(g_m_lpuart0_config.rxmode) {
     case 0:
     {
         if (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_RX_DATA_REG_FULL)) {
+            /* 接收到数据触发的中断 */
             while ((LPUART0->FIFO & LPUART_FIFO_RXEMPT_MASK) == 0) {
                 lpuart_rx_frame_t *frame;
-                if (fifo_get_rear_pointer(&g_lpuart_rx_fifo, (void**)&frame) != STATUS_SUCCESS) {
+                if (fifo_get_rear_pointer(&g_lpuart_rx_fifo, (void**)&frame)
+                        != STATUS_SUCCESS) {
                     GPIO_HAL_ClearPins(PTC, 1<<11);
                     return;
                 }
@@ -59,6 +63,7 @@ void lpuart_RX_callback_transparent_transmission()
                 }
             }
         } else if (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_IDLE_LINE_DETECT)) {
+            /* 串口空闲触发的中断 */
             lpuart_rx_frame_t *frame;
             if (fifo_get_rear_pointer(&g_lpuart_rx_fifo, (void**)&frame) != STATUS_SUCCESS) {
                 GPIO_HAL_ClearPins(PTC, 1<<11);
@@ -81,9 +86,10 @@ void lpuart_RX_callback_transparent_transmission()
 
 /**
  * \brief   处于配置参数模式时,串口中断回掉函数
+ *
  * \note    接收指令时,指令必须由"\r\n结束"
  */
-void lpuart_RX_callback_configuration_parameters()
+void lpuart_RX_callback_config()
 {
     if (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_RX_DATA_REG_FULL)) {
         uint8_t Res;
@@ -104,7 +110,7 @@ void lpuart_RX_callback_configuration_parameters()
                 } else {                    /* 接到数据 */
                     g_uart_rx_buff[g_uart_rx_sta&0X3FFF] = Res;
                     g_uart_rx_sta++;
-                    if(g_uart_rx_sta>(USART_REC_LEN-1)) { /* 接收数据错误,重新开始接收 */
+                    if(g_uart_rx_sta>(__LPUSART_REC_LEN-1)) { /* 接收数据错误,重新开始接收 */
                         g_uart_rx_sta = 0;
                     }
                 }
@@ -117,26 +123,28 @@ void lpuart_RX_callback_configuration_parameters()
 
 /**
  * \brief   初始化串口
+ *
  * \param   lpuartUserConfig    串口配置信息
  */
-status_t LPUART0_init(lpuart_user_config_t *lpuartUserConfig)
+status_t LPUART0_init(lpuart_user_config_t *p_lpuartUserConfig)
 {
     status_t statu;
     uint32_t lpuartSourceClock;
-    fifo_init(&g_lpuart_rx_fifo, __g_lpuart_rx_base, 1024, sizeof(lpuart_rx_frame_t));
+    fifo_init(&g_lpuart_rx_fifo, __g_lpuart_rx_base,
+            __LPUART_FIFO_SIZE, sizeof(lpuart_rx_frame_t));
 
     (void)CLOCK_SYS_GetFreq(PCC_LPUART0_CLOCK, &lpuartSourceClock);
 
     LPUART_HAL_Init(LPUART0);
     statu = LPUART_HAL_SetBaudRate(LPUART0, lpuartSourceClock,
-            lpuartUserConfig->baudRate);
+            p_lpuartUserConfig->baudRate);
     if (statu != STATUS_SUCCESS) {
         return statu;
     }
 
-    LPUART_HAL_SetBitCountPerChar(LPUART0, lpuartUserConfig->bitCountPerChar);
-    LPUART_HAL_SetParityMode(LPUART0, lpuartUserConfig->parityMode);
-    LPUART_HAL_SetStopBitCount(LPUART0, lpuartUserConfig->stopBitCount);
+    LPUART_HAL_SetBitCountPerChar(LPUART0, p_lpuartUserConfig->bitCountPerChar);
+    LPUART_HAL_SetParityMode(LPUART0, p_lpuartUserConfig->parityMode);
+    LPUART_HAL_SetStopBitCount(LPUART0, p_lpuartUserConfig->stopBitCount);
 
     /* 使用FIFO */
     LPUART_HAL_SetTransmitterCmd(LPUART0, false);
@@ -151,14 +159,15 @@ status_t LPUART0_init(lpuart_user_config_t *lpuartUserConfig)
     LPUART_HAL_SetIntMode(LPUART0, LPUART_INT_RX_DATA_REG_FULL, true);
 
     /* 初始化为透明传输模式 */
-    LPUART_InstallRxCallback(lpuart_RX_callback_transparent_transmission);
+    LPUART_InstallRxCallback(lpuart_RX_callback_transmission);
     INT_SYS_EnableIRQ(LPUART0_RxTx_IRQn);
     return STATUS_SUCCESS;
 }
 
 /**
  * \brief   为串口设置接收中断回掉函数
- * \param   callback 毁掉函数
+ *
+ * \param   callback 回掉函数
  */
 void LPUART_InstallRxCallback(lpuart0_irq_callback_t callback)
 {
@@ -168,6 +177,7 @@ void LPUART_InstallRxCallback(lpuart0_irq_callback_t callback)
 
 /**
  * \brief   串口中断服务函数
+ *
  * \details 如果设置回掉函数,将调用回掉函数,如果没有设置,将清除中断标志位
  */
 void LPUART0_RxTx_IRQHandler()
@@ -183,10 +193,13 @@ void LPUART0_RxTx_IRQHandler()
     }
 }
 
-
 /**
  * \brief   设置串口波特率
  *
+ * \param   baud    要设置的波特率
+ *
+ * \retval  STATUS_SUCCESS  设置成功
+ *          STATUS_ERROR    设置失败
  */
 status_t LPUART0_set_baud(uint32_t baud)
 {
@@ -202,6 +215,9 @@ status_t LPUART0_set_baud(uint32_t baud)
 
 /**
  * \brief   获得波特率
+ *
+ * \retval  串口波特率
+ *
  * \note    该函数将返回串口0当前实际的波特率,和标准波特率之间有误差
  */
 uint32_t LPUART0_get_baud()
@@ -225,6 +241,7 @@ void LPUART0_transmit_char(char send)
 
 /**
  * \brief   从串口0发送数据
+ *
  * \param   buffer[in]  要发送的数据
  * \param   len[in]     要发送的数据的长度
  */
@@ -237,6 +254,13 @@ void LPUART0_trancemit_buffer(const uint8_t *buffer, uint32_t len)
     }
 }
 
+/**
+ * \brief   串口打印字符串
+ *
+ * \param   data_string[in]     要打印的字符串
+ *
+ * \note    字符串必须以'\0'结束
+ */
 void LPUART0_transmit_string(const char *data_string)
 {
   uint32_t i=0;
@@ -246,12 +270,13 @@ void LPUART0_transmit_string(const char *data_string)
   }
 }
 
+/**
+ * \brief   串口接收一个字符
+ */
 char LPUART0_receive_char(void)
 {
   char recieve;
-  while((LPUART0->STAT & LPUART_STAT_RDRF_MASK) == 0){
-
-  }
+  while((LPUART0->STAT & LPUART_STAT_RDRF_MASK) == 0);
   recieve= LPUART0->DATA;
   return recieve;
 }

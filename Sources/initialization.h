@@ -42,6 +42,9 @@ void init_lpuart(void);
  */
 void get_default_config_info(void);
 
+/**
+ * \brief   设置为默认配置信息
+ */
 void set_to_default_config(void);
 
 #endif /* INITIALIZATION_H_ */

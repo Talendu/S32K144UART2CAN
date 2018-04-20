@@ -11,10 +11,7 @@
 #include "S32K144.h"
 #include "clockMan1.h"
 #include "canCom0.h"
-#include "pin_mux.h"
 #include "dmaController0.h"
-#include "osif.h"
-#include "mlpuart.h"
 #include "config.h"
 #include "fifo.h"
 
@@ -28,8 +25,7 @@
 #define FLEXCAN_RX_DATA_TYPE uint8_t        /**< \brief CAN接收数据存储类型 */
 
 
-extern flexcan_msgbuff_t    g_can_receive_buff;
-extern uint8_t              g_lpuart_receive_buff[];
+extern flexcan_msgbuff_t    g_can_receive_buff; /**< \brief CAN最后一次接收到的数据  */
 
 extern flexcan_data_info_t  g_rx_info;
 extern flexcan_data_info_t  g_tx_info;
@@ -47,6 +43,7 @@ void can_callback_transmission(uint8_t               instance,
 
 /**
  * \brief   参数配置模式CAN接收回掉函数
+ *
  * \param   instance    CAN通道
  * \param   eventType   中断类型
  * \param   state       CAN通道状态信息
@@ -72,5 +69,10 @@ void flexcan_get_source_clock(uint32_t *flexcanSourceClock);
  */
 status_t flexcan_set_baud(const uint8_t *p_parameter);
 
+
+/**
+ * \brief   获取CAN波特率
+ */
+uint32_t flexcan_get_baud(void);
 
 #endif /* MFLEXCAN_H_ */

@@ -45,7 +45,7 @@ status_t get_parameters_from_EEPROM(void){
     if (flash_EEPROM_init() != STATUS_SUCCESS) {
         return STATUS_ERROR;
     }
-    config_parameter = (config_info_t *)(flashSSDConfig.EERAMBase + CONFIG_INFO_OFFSET);
+    config_parameter = (config_info_t *)(g_flashSSDConfig.EERAMBase + CONFIG_INFO_OFFSET);
 
     CRC_DRV_Init(INST_CRC, &crc_InitConfig0);
     CRC_DRV_WriteData(INST_CRC, (uint8_t*)config_parameter,

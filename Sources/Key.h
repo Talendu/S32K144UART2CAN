@@ -8,16 +8,17 @@
 #ifndef KEY_H_
 #define KEY_H_
 
-/* User include */
 #include "S32K144.h"
-/* End of user include */
+#include "pcc_hal.h"
+#include "pin_mux.h"
+#include "interrupt_manager.h"
+#include "osif.h"
+#include "sysmode.h"
+#include "config.h"
 
-/* User define */
-
-/* End of user define */
-
-/* Functions declaration */
+/**
+ * \brief   °´¼ü³õÊ¼»¯
+ */
 void key_init(void);
-/* End of functions declaration */
 
 #endif /* KEY_H_ */

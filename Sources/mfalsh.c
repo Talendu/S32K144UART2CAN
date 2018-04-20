@@ -5,41 +5,41 @@
  *      Author: Administrator
  */
 #include "mflash.h"
-  /* Declare a FLASH config struct which initialized by FlashInit, and will be used by all flash operations */
-flash_ssd_config_t flashSSDConfig;
+flash_ssd_config_t g_flashSSDConfig;
 
-status_t flash_pflash_init(void) {
+/**
+ * \brief   写入pflash前的初始化操作
+ */
+status_t flash_pflash_init(void)
+{
     status_t ret;
 
-
 #ifdef S32K144_SERIES
+    /* 禁用缓存 */
     MSCM->OCMDR[0u] |= MSCM_OCMDR_OCM0(0xFu) | MSCM_OCMDR_OCM1(0xFu) | MSCM_OCMDR_OCM2(0xFu);
 #endif/* S32K144_SERIES */
 
-    /* Install interrupt for Flash Command Complete event */
+    /* 设置中断服务函数 */
     INT_SYS_InstallHandler(FTFC_IRQn, CCIF_Handler, (isr_t*) 0);
     INT_SYS_EnableIRQ(FTFC_IRQn);
 
-    /* Enable global interrupt */
+    /* 使能全局中断 */
     INT_SYS_EnableIRQGlobal();
 
-    /* Always initialize the driver before calling other functions */
-    ret = FLASH_DRV_Init(&flash1_InitConfig0, &flashSSDConfig);
+    /* 初始化FLASH */
+    ret = FLASH_DRV_Init(&flash1_InitConfig0, &g_flashSSDConfig);
     if (ret != STATUS_SUCCESS)
     {
         return ret;
     }
 
-    /* Set callback function before a long time consuming flash operation
-     * (ex: erasing) to let the application code do other tasks while flash
-     * in operation. In this case we use it to enable interrupt for
-     * Flash Command Complete event */
-    flashSSDConfig.CallBack = (flash_callback_t)CCIF_Callback;
+    /* 设置flash写入完成回掉函数 */
+    g_flashSSDConfig.CallBack = (flash_callback_t)CCIF_Callback;
 
     return STATUS_SUCCESS;
 }
 
-/*
+/**
  * \brief   将DFlash初始化为EEPROM
  */
 status_t flash_EEPROM_init(void) {
@@ -56,47 +56,47 @@ status_t flash_EEPROM_init(void) {
 #endif /* FLASH_TARGET */
 
 #ifdef S32K144_SERIES
+    /* 禁用缓存 */
     MSCM->OCMDR[1u] |= MSCM_OCMDR_OCM0(0xFu) | MSCM_OCMDR_OCM1(0xFu) | MSCM_OCMDR_OCM2(0xFu);
     MSCM->OCMDR[2u] |= MSCM_OCMDR_OCM0(0xFu) | MSCM_OCMDR_OCM1(0xFu) | MSCM_OCMDR_OCM2(0xFu);
 #endif /* S32K144_SERIES */
 
-    /* Install interrupt for Flash Command Complete event */
+    /* 设置中断服务函数 */
     INT_SYS_InstallHandler(FTFC_IRQn, CCIF_Handler, (isr_t*) 0);
     INT_SYS_EnableIRQ(FTFC_IRQn);
 
-    /* Enable global interrupt */
+    /* 使能全局中断 */
     INT_SYS_EnableIRQGlobal();
 
-    /* Always initialize the driver before calling other functions */
-    ret = FLASH_DRV_Init(&flash1_InitConfig0, &flashSSDConfig);
+    /* 初始化FLASH */
+    ret = FLASH_DRV_Init(&flash1_InitConfig0, &g_flashSSDConfig);
     if (ret != STATUS_SUCCESS)
     {
         return ret;
     }
 
 #if ((FEATURE_FLS_HAS_FLEX_NVM == 1u) & (FEATURE_FLS_HAS_FLEX_RAM == 1u))
-    /* Config FlexRAM as EEPROM if it is currently used as traditional RAM */
-    if (flashSSDConfig.EEESize == 0u)
+    /* 如果flexRam没有作为EEPROM使用,将其设置为EEPROM */
+    if (g_flashSSDConfig.EEESize == 0u)
     {
 #ifndef FLASH_TARGET
-        /* First, erase all Flash blocks if code is placed in RAM to ensure
-         * the IFR region is blank before partitioning FLexNVM and FlexRAM */
+        /* 擦出扇区 */
         uint32_t address;
         uint32_t size;
-        ret = FLASH_DRV_EraseAllBlock(&flashSSDConfig);
+        ret = FLASH_DRV_EraseAllBlock(&g_flashSSDConfig);
         if (ret != STATUS_SUCCESS)
         {
             return ret;
         }
 
-        /* Verify the erase operation at margin level value of 1 */
-        ret = FLASH_DRV_VerifyAllBlock(&flashSSDConfig, 1u);
+        /* 校验是否擦除成功 */
+        ret = FLASH_DRV_VerifyAllBlock(&g_flashSSDConfig, 1u);
         if (ret != STATUS_SUCCESS)
         {
             return ret;
         }
 
-        /* Reprogram secure byte in Flash configuration field */
+        /* 安全配置字段Flash编程 */
 #if (FEATURE_FLS_HAS_PROGRAM_PHRASE_CMD == 1u)
         address = 0x408u;
         size = FTFx_PHRASE_SIZE;
@@ -104,46 +104,46 @@ status_t flash_EEPROM_init(void) {
         address = 0x40Cu;
         size = FTFx_LONGWORD_SIZE;
 #endif /* FEATURE_FLS_HAS_PROGRAM_PHRASE_CMD */
-        ret = FLASH_DRV_Program(&flashSSDConfig, address, size, unsecure_key);
+        ret = FLASH_DRV_Program(&g_flashSSDConfig, address, size, unsecure_key);
         if (ret != STATUS_SUCCESS)
         {
             return ret;
         }
 #endif /* FLASH_TARGET */
 
-        /* Configure FlexRAM as EEPROM and FlexNVM as EEPROM backup region,
-         * DEFlashPartition will be failed if the IFR region isn't blank.
-         * Refer to the device document for valid EEPROM Data Size Code
-         * and FlexNVM Partition Code. For example on S32K144:
+        /* 将FlexRAM配置为EEPROM,并将FlexNVM作为EEPROM的存储区,
+         * 如果IFR区域不是空白将不能成功DEFlashPartition.
+         * 关于有效的EEPROM数据大小的代码和代码flexnvm分区设备文件
+         * S32K144:
          * - EEEDataSizeCode = 0x02u: EEPROM size = 4 Kbytes
-         * - DEPartitionCode = 0x08u: EEPROM backup size = 64 Kbytes */
-        ret = FLASH_DRV_DEFlashPartition(&flashSSDConfig, 0x02u, 0x08u, 0x0u, false);
+         * - DEPartitionCode = 0x08u: EEPROM backup size = 64 Kbytes
+         */
+        ret = FLASH_DRV_DEFlashPartition(&g_flashSSDConfig, 0x02u, 0x08u, 0x0u, false);
         if (ret != STATUS_SUCCESS)
         {
             return ret;
         }
         else
         {
-            /* Re-initialize the driver to update the new EEPROM configuration */
-            ret = FLASH_DRV_Init(&flash1_InitConfig0, &flashSSDConfig);
+            /* 重新初始化FLASH */
+            ret = FLASH_DRV_Init(&flash1_InitConfig0, &g_flashSSDConfig);
             if (ret != STATUS_SUCCESS)
             {
                 return ret;
             }
 
-            /* Make FlexRAM available for EEPROM */
-            ret = FLASH_DRV_SetFlexRamFunction(&flashSSDConfig, EEE_ENABLE, 0x00u, NULL);
+            /* 使能FlaxRAM为EEPROM */
+            ret = FLASH_DRV_SetFlexRamFunction(&g_flashSSDConfig, EEE_ENABLE, 0x00u, NULL);
             if (ret != STATUS_SUCCESS)
             {
                 return ret;
             }
         }
     }
-    else    /* FLexRAM is already configured as EEPROM */
+    else    /* FLexRAM已经被初始化为EEPROM */
     {
-        /* Make FlexRAM available for EEPROM, make sure that FlexNVM and FlexRAM
-         * are already partitioned successfully before */
-        ret = FLASH_DRV_SetFlexRamFunction(&flashSSDConfig, EEE_ENABLE, 0x00u, NULL);
+        /* 使能FlaxRAM为EEPROM */
+        ret = FLASH_DRV_SetFlexRamFunction(&g_flashSSDConfig, EEE_ENABLE, 0x00u, NULL);
         if (ret != STATUS_SUCCESS)
         {
             return ret;
@@ -151,12 +151,8 @@ status_t flash_EEPROM_init(void) {
     }
 #endif /* (FEATURE_FLS_HAS_FLEX_NVM == 1u) & (FEATURE_FLS_HAS_FLEX_RAM == 1u) */
 
-    /* Set callback function before a long time consuming flash operation
-     * (ex: erasing) to let the application code do other tasks while flash
-     * in operation. In this case we use it to enable interrupt for
-     * Flash Command Complete event */
-
-    flashSSDConfig.CallBack = (flash_callback_t)CCIF_Callback;
+    /* 设置flash写入完成回掉函数 */
+    g_flashSSDConfig.CallBack = (flash_callback_t)CCIF_Callback;
     return STATUS_SUCCESS;
 }
 
@@ -175,17 +171,17 @@ status_t flash_pflash_erase_sectors(uint32_t sector_index,
 
     dest = sector_index << 12;
     size = sector_num << 12;
-    ret = FLASH_DRV_EraseSector(&flashSSDConfig, dest, size);
+    ret = FLASH_DRV_EraseSector(&g_flashSSDConfig, dest, size);
     if (ret != STATUS_SUCCESS)
     {
         return ret;
     }
 
     /* Disable Callback */
-    flashSSDConfig.CallBack = NULL_CALLBACK;
+    g_flashSSDConfig.CallBack = NULL_CALLBACK;
 
     /* Verify the erase operation at margin level value of 1, user read */
-    ret = FLASH_DRV_VerifySection(&flashSSDConfig, dest, size / FTFx_DPHRASE_SIZE, 1u);
+    ret = FLASH_DRV_VerifySection(&g_flashSSDConfig, dest, size / FTFx_DPHRASE_SIZE, 1u);
     if (ret != STATUS_SUCCESS)
     {
         return ret;
@@ -196,29 +192,28 @@ status_t flash_pflash_erase_sectors(uint32_t sector_index,
 
 /*
  * \brief   向PFlash写入数据
- * \param   address 写入数据的地址,必须是8的倍数
- * \param   size    写入数据的字节数
- * \param   sourceBuffer    要写入的数据
- * \param   failAddr[out]   返回写入数据的首地址
+ * \param   address             写入数据的地址,必须是8的倍数
+ * \param   size                写入数据的字节数
+ * \param   sourceBuffer[in]    要写入的数据
+ * \param   failAddr[out]       返回写入数据失败的地址
  * \retval
  */
-status_t flash_write_PFLASH(uint32_t address, uint32_t size, uint8_t *sourceBuffer, uint32_t *failAddr) {
-
-    /* Erase the sixth PFlash sector */
+status_t flash_write_PFLASH(uint32_t    address,
+                            uint32_t    size,
+                            uint8_t    *p_sourceBuffer,
+                            uint32_t   *p_failAddr)
+{
     status_t ret;
-//    address = 6u * FEATURE_FLS_PF_BLOCK_SECTOR_SIZE;
-//    ret = flash_pflash_erase_and_verify_sector(&flashSSDConfig, address, size);
-
-    /* Write some data to the erased PFlash sector */
-//    size = BUFFER_SIZE;
-    ret = FLASH_DRV_Program(&flashSSDConfig, address, size, sourceBuffer);
+    /* 向FLASH中写入数据 */
+    ret = FLASH_DRV_Program(&g_flashSSDConfig, address, size, p_sourceBuffer);
     if (ret != STATUS_SUCCESS)
     {
         return ret;
     }
 
-    /* Verify the program operation at margin level value of 1, user margin */
-    ret = FLASH_DRV_ProgramCheck(&flashSSDConfig, address, size, sourceBuffer, failAddr, 1u);
+    /* 校验写入的数据 */
+    ret = FLASH_DRV_ProgramCheck(&g_flashSSDConfig, address, size,
+            p_sourceBuffer, p_failAddr, 1u);
     if (ret != STATUS_SUCCESS)
     {
         return ret;
@@ -226,45 +221,60 @@ status_t flash_write_PFLASH(uint32_t address, uint32_t size, uint8_t *sourceBuff
     return STATUS_SUCCESS;
 }
 
-
-status_t flash_write_EEPROM(uint32_t index, uint8_t *sourceBuffer, uint32_t len) {
+/**
+ * \brief   向EEPROM中写入数据
+ *
+ * \param   offset          写入数据地址与EEPROM首地址的偏移量
+ * \param   sourceBuffer    要写入的数据
+ * \param   len             写入数据的长度
+ *
+ * \retval  STATUS_SUCCESS  写入成功
+ *          STATUS_ERROR    写入失败
+ */
+status_t flash_write_EEPROM(uint32_t    offset,
+                            uint8_t    *sourceBuffer,
+                            uint32_t    len)
+{
     status_t ret;
-    /* Try to write data to EEPROM if FlexRAM is configured as EEPROM */
-     if (flashSSDConfig.EEESize != 0u)
+    /* 向EEPROM中写入数据 */
+     if (g_flashSSDConfig.EEESize != 0u)
      {
          uint32_t address;
-         address = flashSSDConfig.EERAMBase + index;
-         ret = FLASH_DRV_EEEWrite(&flashSSDConfig, address, len, sourceBuffer);
+         address = g_flashSSDConfig.EERAMBase + offset;
+         ret = FLASH_DRV_EEEWrite(&g_flashSSDConfig, address, len, sourceBuffer);
          if (ret != STATUS_SUCCESS)
          {
              return ret;
          }
 
-         /* Verify the written data */
+         /* 校验写入的数据 */
          if (*((uint32_t *)sourceBuffer) != *((uint32_t *)address))
          {
-             /* Failed to write data to EEPROM */
              return STATUS_ERROR;
          }
      }
      return STATUS_SUCCESS;
 }
 
+/**
+ * \brief   FLASH操作成功中断服务函数
+ */
 void CCIF_Handler(void)
 {
-  /* Disable Flash Command Complete interrupt */
+  /* 关闭flash写入完成中断 */
   FTFx_FCNFG &= (~FTFx_FCNFG_CCIE_MASK);
 
   return;
 }
 
-/*!
-\brief Callback function for Flash operations
-*/
+/**
+ * \brief   写入flash前的回掉函数
+ * \details 在向FALSH写入数据前,会先调用该函数
+ */
 START_FUNCTION_DEFINITION_RAMSECTION
 void CCIF_Callback(void)
 {
-  /* Enable interrupt for Flash Command Complete */
+  /* 使能FLASH写入完成中断 */
   if ((FTFx_FCNFG & FTFx_FCNFG_CCIE_MASK) == 0u)
   {
       FTFx_FCNFG |= FTFx_FCNFG_CCIE_MASK;

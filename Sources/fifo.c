@@ -127,7 +127,9 @@ uint32_t fifo_get_element_count(fifo_t *p_fifo) {
 
 /**
  * \brief   获取缓冲区能缓存的最大成员数
+ *
  * \details 缓冲区内存大小 = 一个成员的大小 x 成员最大容量
+ *
  * \note    不是内存容量
  */
 uint32_t fifo_get_size(fifo_t *p_fifo) {

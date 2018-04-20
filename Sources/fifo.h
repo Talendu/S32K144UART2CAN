@@ -28,9 +28,15 @@ typedef struct {
 	uint32_t front;         /**< \brief fifo头 */
 	uint32_t rear;          /**< \brief fifo尾*/
 	uint32_t size;          /**< \brief fifo大小,不是字节数,而是fifo的长度 */
-	uint8_t *base;          /**< \brief 内存块指针,需要在其他地方分配内存空间 */
 	uint8_t member_size;    /**< \brief fifo中每个成员的大小 */
 	uint8_t is_empty;       /**< \brief fifo是否为空 */
+	/**
+	 * \brief 缓冲区指针
+	 *
+	 * 这个指针指向的内存空间,
+	 * 调用者必须负责内存管理。
+	 */
+	uint8_t *base;          /**< \brief 内存块指针,需要在其他地方分配内存空间 */
 }fifo_t;
 
 /**
