@@ -14,7 +14,7 @@ static void can_to_lpuart(void);
  * \brief   主循环, 初始化完成后进入该循环, 非意外情况不会退出
  */
 void mainloop(void) {
-    change_mode();
+//    change_mode();
     while(1) {
         if (get_system_mode() == 0) {
             transparent_transmission();
@@ -39,9 +39,50 @@ static void lpuart_to_can(void) {
                 != STATUS_BUSY) {   /* CAN处于非忙状态,及CAN邮箱中的数据已经发送完成 */
             g_tx_info.msg_id_type = FLEXCAN_MSG_ID_STD;
             g_tx_info.data_length = (frame->descriptor & 0x7f) % 9;
+            g_tx_info.fd_enable = g_m_flexcan_config.fd_enable;
             FLEXCAN_DRV_Send(INST_CANCOM0, TRANSMIT_STD_MB, &g_tx_info,
                     g_m_flexcan_config.tx_id, frame->data);
             fifo_release(&g_lpuart_rx_fifo);  /* 数据发送完成, 释放缓冲区 */
+        }
+    } else if(g_m_flexcan_config.txmode == 1) {
+
+        if (FLEXCAN_DRV_GetTransferStatus(INST_CANCOM0, TRANSMIT_EXT_MB)
+                            != STATUS_BUSY) {   /* CAN处于非忙状态,及CAN邮箱中的数据已经发送完成 */
+
+            g_tx_info.msg_id_type = FLEXCAN_MSG_ID_EXT;
+
+            g_tx_info.data_length = (frame->descriptor & 0x7f) % 9;
+            g_tx_info.fd_enable = g_m_flexcan_config.fd_enable;
+            FLEXCAN_DRV_Send(INST_CANCOM0, TRANSMIT_EXT_MB, &g_tx_info,
+                    g_m_flexcan_config.tx_id, frame->data);
+            fifo_release(&g_lpuart_rx_fifo);  /* 数据发送完成, 释放缓冲区 */
+        }
+    } else if(g_m_flexcan_config.txmode == 2) {
+        if (g_m_flexcan_config.tx_id < 0x800)
+        {
+            if (FLEXCAN_DRV_GetTransferStatus(INST_CANCOM0, TRANSMIT_STD_MB)
+                    != STATUS_BUSY) {   /* CAN处于非忙状态,及CAN邮箱中的数据已经发送完成 */
+
+                g_tx_info.msg_id_type = FLEXCAN_MSG_ID_STD;
+
+                g_tx_info.data_length = (frame->descriptor & 0x7f) % 9;
+                g_tx_info.fd_enable = g_m_flexcan_config.fd_enable;
+                FLEXCAN_DRV_Send(INST_CANCOM0, TRANSMIT_STD_MB, &g_tx_info,
+                        g_m_flexcan_config.tx_id, frame->data);
+                fifo_release(&g_lpuart_rx_fifo);  /* 数据发送完成, 释放缓冲区 */
+            }
+        } else {
+            if (FLEXCAN_DRV_GetTransferStatus(INST_CANCOM0, TRANSMIT_EXT_MB)
+                                != STATUS_BUSY) {   /* CAN处于非忙状态,及CAN邮箱中的数据已经发送完成 */
+
+                g_tx_info.msg_id_type = FLEXCAN_MSG_ID_EXT;
+
+                g_tx_info.data_length = (frame->descriptor & 0x7f) % 9;
+                g_tx_info.fd_enable = g_m_flexcan_config.fd_enable;
+                FLEXCAN_DRV_Send(INST_CANCOM0, TRANSMIT_EXT_MB, &g_tx_info,
+                        g_m_flexcan_config.tx_id, frame->data);
+                fifo_release(&g_lpuart_rx_fifo);  /* 数据发送完成, 释放缓冲区 */
+            }
         }
     }
 

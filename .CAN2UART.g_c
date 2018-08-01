@@ -2,7 +2,7 @@
 <GenerationInfo_G_C>
   <Options>
     <ProjectName>CAN2UART</ProjectName>
-    <ProjectDirectory>F:\ZLG\实习期\毕业设计\Workspace\CAN2UART\</ProjectDirectory>
+    <ProjectDirectory>F:\ZLG\Workspace\GraduationDesign\CAN2UART\</ProjectDirectory>
     <ProjectMainModuleName>main</ProjectMainModuleName>
     <DestEventsDirectory>Sources\</DestEventsDirectory>
     <DestDriversSubDirectory>..\Generated_Code\</DestDriversSubDirectory>
@@ -548,7 +548,7 @@
     </GenFiles>
     <SignalListFile />
     <DestinationCompiler>GNUC</DestinationCompiler>
-    <ProjectModificationStamp>10</ProjectModificationStamp>
+    <ProjectModificationStamp>14</ProjectModificationStamp>
   </Options>
   <CpuID_1>
     <Generated>true</Generated>
@@ -968,7 +968,7 @@
     <GenDriverVersion>01.00</GenDriverVersion>
     <GenEventModule />
     <HeaderAge>1284604038</HeaderAge>
-    <CodeAge>1284604009</CodeAge>
+    <CodeAge>1285194166</CodeAge>
     <AsemblAge>-1</AsemblAge>
     <GenNumMethods>24</GenNumMethods>
     <FLEXCAN_DRV_SetBitrate>true</FLEXCAN_DRV_SetBitrate>

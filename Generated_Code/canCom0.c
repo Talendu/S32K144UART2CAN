@@ -7,7 +7,7 @@
 **     Version     : Component SDK_S32K144_04, Driver 01.00, CPU db: 3.00.000
 **     Repository  : SDK_S32K144_04
 **     Compiler    : GNU C Compiler
-**     Date/Time   : 2018-04-17, 16:03, # CodeGen: 1
+**     Date/Time   : 2018-04-26, 16:13, # CodeGen: 20
 **
 **     Copyright : 1997 - 2015 Freescale Semiconductor, Inc.
 **     Copyright 2016-2017 NXP
@@ -57,7 +57,7 @@ flexcan_state_t canCom0_State;
 const flexcan_user_config_t canCom0_InitConfig0 = {
     .fd_enable = false,
     .pe_clock = FLEXCAN_CLK_SOURCE_SOSCDIV2,
-    .max_num_mb = 16,
+    .max_num_mb = 7,
     .num_id_filters = FLEXCAN_RX_FIFO_ID_FILTERS_8,
     .is_rx_fifo_needed = false,
     .flexcanMode = FLEXCAN_NORMAL_MODE,

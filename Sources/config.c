@@ -17,20 +17,22 @@ const char *g_config_item[CONFIG_ITEM_COUNT] = {
         "AT",
         "+",
         "=",
-        "BAUD",     /* 波特率 */
-        "STOP",     /* 停止位数量 0:一位; 1:2位. */
-        "PARI",     /* 校验 0:不校验; 2:偶校验; 3:奇校验. */
+        "BAUD",     /** 波特率 */
+        "STOP",     /** 停止位数量 0:一位; 1:2位. */
+        "PARI",     /** 校验 0:不校验; 2:偶校验; 3:奇校验. */
         "NOTERR",
-        "START",    /* 结束配置,开启透传. */
-        "TMODE",    /* 串口输出模式  0:只输出数据;
+        "START",    /** 结束配置,开启透传. */
+        "TMODE",    /** 串口输出模式  0:只输出数据;
                                   1:输出地址+数据,1字节头+4字节地址+1字节数据长度+数据; */
-                    /* CAN输出模式 0:标准帧; 1:扩展帧; 2:标准帧或者扩展帧. */
-        "RMODE",    /* 串口输入模式  0:只输入数据;
+                    /** CAN输出模式 0:标准帧; 1:扩展帧; 2:标准帧或者扩展帧. */
+        "RMODE",    /** 串口输入模式  0:只输入数据;
                                   1:输入地址+数据,1字节头+4字节地址+1字节数据长度+数据; */
-                    /* CAN输出模式 0:标准帧; 1:扩展帧; 2:标准帧或者扩展帧. */
-        "TXID",     /* 发送数据时用的ID */
-        "RXID",     /* 接收数据用的ID */
-        "IDMASK",   /* 接收ID屏蔽码 */
+                    /** CAN输出模式 0:标准帧; 1:扩展帧; 2:标准帧或者扩展帧. */
+        "TXID",     /** 发送数据时用的ID */
+        "RXID",     /** 接收数据用的ID */
+        "IDMASK",   /** 接收ID屏蔽码 */
+		"FDEN",     /** 使能CAN FD */
+		"FDBAUD",
 };
 
 const char *g_statu_item[STATU_ITEM_COUNT] = {
@@ -63,10 +65,12 @@ void config_by_lpuart(void) {
         if (g_uart_rx_buff[index] != '+') {   /* AT后面不是'+' */
             if (g_uart_rx_buff[index] == '\0') {  /* 而是'\0': */
                 LPUART0_transmit_string(g_statu_item[OK_index]); /* 返回OK; */
+                GPIO_HAL_SetPins(PTC, 1<<11);
             } else {                            /* 否则: */
-                LPUART0_transmit_string(g_statu_item[ERROR_index]); /* 返回OK. */
+                LPUART0_transmit_string(g_statu_item[ERROR_index]); /* 返回ERROR. */
             }
             g_uart_rx_sta = 0;
+            GPIO_HAL_SetPins(PTC, 1<<11);
             return;
         }
 
@@ -327,7 +331,9 @@ void LPUART0_config_can(config_item_index_t  config_item_index,
     switch(config_item_index) {
     case BAUD_index:
     {
-        if (flexcan_set_baud(p_parameter) == STATUS_SUCCESS) {
+        uint32_t baud;
+        if (string2number(p_parameter, &baud) == STATUS_SUCCESS
+                && flexcan_set_baud(baud) == STATUS_SUCCESS) {
             LPUART0_print_option_result(C_index, BAUD_index, OK_index);
         } else {
             LPUART0_print_option_result(C_index, BAUD_index, ERROR_index);
@@ -342,9 +348,9 @@ void LPUART0_config_can(config_item_index_t  config_item_index,
                     || tmode == 1
                     || tmode == 2)){
             g_m_flexcan_config.txmode = tmode;
-            LPUART0_print_option_result(C_index, PARI_index, OK_index);
+            LPUART0_print_option_result(C_index, TMODE_index, OK_index);
         } else {
-            LPUART0_print_option_result(C_index, PARI_index, ERROR_index);
+            LPUART0_print_option_result(C_index, TMODE_index, ERROR_index);
         }
         break;
     }
@@ -356,6 +362,7 @@ void LPUART0_config_can(config_item_index_t  config_item_index,
                     || rmode == 1
                     || rmode == 2)){
             g_m_flexcan_config.rxmode = rmode;
+            flexcan_init();
             LPUART0_print_option_result(C_index, RMODE_index, OK_index);
         } else {
             LPUART0_print_option_result(C_index, RMODE_index, ERROR_index);
@@ -367,12 +374,12 @@ void LPUART0_config_can(config_item_index_t  config_item_index,
         uint32_t txid = 0;
         if(string2number(p_parameter, &txid) == STATUS_SUCCESS){
             if (g_m_flexcan_config.txmode == 0) {             /* 发送模式0 */
-                txid &= CAN_ID_STD_MASK>>CAN_ID_STD_SHIFT;  /* 标准帧ID */
+                txid &= CAN_ID_STD_MASK>>CAN_ID_STD_SHIFT;    /* 标准帧ID */
             } else if (g_m_flexcan_config.txmode == 1) {      /* 发送模式1 */
-                txid &= CAN_ID_EXT_MASK;                    /* 扩展帧ID */
+                txid &= CAN_ID_EXT_MASK|CAN_ID_STD_MASK;      /* 扩展帧ID */
             } else if (g_m_flexcan_config.txmode == 2) {      /* 发送模式2 */
                 if ((txid&CAN_ID_EXT_MASK) > 0x7ff) {         /* 根据ID选择发送帧的模式, */
-                    txid &= CAN_ID_EXT_MASK;                /* ID超过标准帧ID范围. */
+                    txid &= CAN_ID_EXT_MASK;                  /* ID超过标准帧ID范围. */
                 } else {
                     txid &= CAN_ID_STD_MASK>>CAN_ID_STD_SHIFT;
                 }
@@ -420,14 +427,48 @@ void LPUART0_config_can(config_item_index_t  config_item_index,
         if(string2number(p_parameter, &idmask) == STATUS_SUCCESS){
             idmask &= CAN_ID_EXT_MASK;
             g_m_flexcan_config.id_mask = idmask;
-            FLEXCAN_DRV_SetRxMbGlobalMask(INST_CANCOM0, FLEXCAN_MSG_ID_EXT,
-                    g_m_flexcan_config.id_mask);
+
+            if (g_m_flexcan_config.rxmode == 0) {         /* 模式0,只接受标准帧 */
+                FLEXCAN_DRV_SetRxMbGlobalMask(INST_CANCOM0,
+                            FLEXCAN_MSG_ID_STD, g_m_flexcan_config.id_mask);
+            } else if (g_m_flexcan_config.rxmode == 1) {  /* 模式1,只接受扩展帧 */
+                FLEXCAN_DRV_SetRxMbGlobalMask(INST_CANCOM0,
+                            FLEXCAN_MSG_ID_EXT, g_m_flexcan_config.id_mask);
+            } else if (g_m_flexcan_config.rxmode == 2) {  /* 模式1,接收两种帧 */
+                if ((g_m_flexcan_config.rx_id & 0x7ff) != 0) {
+                    FLEXCAN_DRV_SetRxMbGlobalMask(INST_CANCOM0,
+                            FLEXCAN_MSG_ID_EXT, g_m_flexcan_config.id_mask);
+                } else {
+                    FLEXCAN_DRV_SetRxMbGlobalMask(INST_CANCOM0,
+                            FLEXCAN_MSG_ID_STD, g_m_flexcan_config.id_mask);
+                }
+            }
             LPUART0_print_option_result(C_index, IDMASK_index, OK_index);
         } else {
             LPUART0_print_option_result(C_index, IDMASK_index, ERROR_index);
         }
         break;
     }
+    case FDBAUD_index:
+    {
+        uint32_t baud;
+        if (string2number(p_parameter, &baud) == STATUS_SUCCESS
+            && flexcan_set_fdbaud(baud) == STATUS_SUCCESS) {
+            LPUART0_print_option_result(C_index, FDBAUD_index, OK_index);
+        } else {
+            LPUART0_print_option_result(C_index, FDBAUD_index, ERROR_index);
+        }
+        break;
+    }
+    case FDEN_index:
+        if (p_parameter[0] == '0'){
+            g_m_flexcan_config.fd_enable = 0;
+        } else {
+            g_m_flexcan_config.fd_enable = 1;
+        }
+        flexcan_init();
+        LPUART0_print_option_result(C_index, FDEN_index, OK_index);
+        break;
     default:
         break;
     }
@@ -464,11 +505,33 @@ void LPUART0_print_can_info(config_item_index_t config_item_index)
     case IDMASK_index:
         LPUART0_print_config_parameter(C_index, IDMASK_index, g_m_flexcan_config.id_mask);
         break;
+    case FDBAUD_index:
+    {
+        uint32_t baud = 0;
+        baud = flexcan_get_fdbaud();
+        LPUART0_print_config_parameter(C_index, FDBAUD_index, baud);
+    }
+        break;
+    case FDEN_index:
+        LPUART0_print_config_parameter(C_index, FDEN_index, g_m_flexcan_config.fd_enable);
+        break;
     default:
         break;
     }
 }
 
+/**
+ * \brief   将数字字符串转换为数字
+ *
+ * \param   p_string[in]    要转换的字符串
+ * \param   p_number[out]   转换结果
+ *
+ * \retval  STATUS_ERROR    转换失败
+ *          STATUS_SUCCESS  转换成功
+ *
+ * \noet    可以转换十进制字符串和十六进制字符串
+ *          十六进制字符串必须以0x或0X开头
+ */
 status_t string2number(const uint8_t *p_string, uint32_t *p_number) {
     const uint8_t *p = p_string;
     uint32_t temp = 0;
@@ -486,6 +549,18 @@ status_t string2number(const uint8_t *p_string, uint32_t *p_number) {
     return STATUS_SUCCESS;
 }
 
+/**
+ * \brief   将十六进制字符串转换为数字
+ *
+ * \param   p_hex[in]       要转换的十六进制字符串
+ * \param   p_number[out]   转换结果
+ *
+ * \reval   STATUS_ERROR    转换失败
+ *          STATUS_SUCCESS  转换成功
+ *
+ * \note    输入的十六进制字符串必须是去掉0x或0X的字符串
+ *          转换的长度不能超过32位
+ */
 status_t hex2number(const uint8_t *p_hex, uint32_t *p_number)
 {
     const uint8_t *p = p_hex;

@@ -16,6 +16,7 @@ lpuart_rx_frame_t __g_lpuart_rx_base[__LPUART_FIFO_SIZE];   /**< \brief 透传模式
 
 /**
  * \brief   接收状态
+ *
  * bit15    接收完成标志
  * bit14    接收到0x0d
  * bit13~0  接收到的有效字节数目
@@ -46,21 +47,25 @@ void lpuart_RX_callback_transmission()
     {
         if (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_RX_DATA_REG_FULL)) {
             /* 接收到数据触发的中断 */
-            while ((LPUART0->FIFO & LPUART_FIFO_RXEMPT_MASK) == 0) {
+            while (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_RX_DATA_REG_FULL)) {
                 lpuart_rx_frame_t *frame;
+                if (lpuart_rx_len == 8) {
+                    lpuart_rx_len = 0;
+                    if (fifo_get_rear_pointer(&g_lpuart_rx_fifo, (void**)&frame)
+                            == STATUS_SUCCESS) {
+                        frame->descriptor = 0x08;
+                        fifo_append(&g_lpuart_rx_fifo);
+                    }
+                }
                 if (fifo_get_rear_pointer(&g_lpuart_rx_fifo, (void**)&frame)
                         != STATUS_SUCCESS) {
                     GPIO_HAL_ClearPins(PTC, 1<<11);
                     return;
                 }
 
-                frame->data[lpuart_rx_len] = (uint8_t)LPUART0->DATA;
+                LPUART_HAL_Getchar(LPUART0, &(frame->data[lpuart_rx_len]));
                 lpuart_rx_len++;
-                if (lpuart_rx_len == 8) {
-                    lpuart_rx_len = 0;
-                    frame->descriptor = 0x08;
-                    fifo_append(&g_lpuart_rx_fifo);
-                }
+                frame->descriptor = lpuart_rx_len;
             }
         } else if (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_IDLE_LINE_DETECT)) {
             /* 串口空闲触发的中断 */
@@ -93,7 +98,7 @@ void lpuart_RX_callback_config()
 {
     if (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_RX_DATA_REG_FULL)) {
         uint8_t Res;
-        Res = LPUART0->DATA; /* 读取接收到的数据 */
+        LPUART_HAL_Getchar(LPUART0, &Res);/* 读取接收到的数据 */
 
         if((g_uart_rx_sta&0x8000)==0)/* 接收未完成 */
         {
@@ -146,11 +151,13 @@ status_t LPUART0_init(lpuart_user_config_t *p_lpuartUserConfig)
     LPUART_HAL_SetParityMode(LPUART0, p_lpuartUserConfig->parityMode);
     LPUART_HAL_SetStopBitCount(LPUART0, p_lpuartUserConfig->stopBitCount);
 
+#if __USE_TXRX_FIFO == 1
     /* 使用FIFO */
     LPUART_HAL_SetTransmitterCmd(LPUART0, false);
     LPUART_HAL_SetReceiverCmd(LPUART0, false);
-    LPUART0->FIFO |= LPUART_FIFO_RXFE(1);
-    LPUART0->FIFO |= LPUART_FIFO_TXFE(1);
+    LPUART_HAL_SetTxFIFOCmd(LPUART0, true);
+    LPUART_HAL_SetRxFIFOCmd(LPUART0, true);
+#endif
     LPUART_HAL_SetTransmitterCmd(LPUART0, true);
     LPUART_HAL_SetReceiverCmd(LPUART0, true);
 
@@ -186,7 +193,7 @@ void LPUART0_RxTx_IRQHandler()
         __gfn_lpuart0_irq_callback();
     } else {
         if (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_RX_DATA_REG_FULL)) {
-            LPUART0->FIFO |= LPUART_FIFO_RXFLUSH_MASK;
+            LPUART_HAL_FlushRxFifoBuffer(LPUART0);
         } else if (LPUART_HAL_GetStatusFlag(LPUART0, LPUART_IDLE_LINE_DETECT)) {
             LPUART_HAL_ClearStatusFlag(LPUART0, LPUART_IDLE_LINE_DETECT);
         }
@@ -235,8 +242,8 @@ uint32_t LPUART0_get_baud()
  */
 void LPUART0_transmit_char(char send)
 {
-  while((LPUART0->STAT & LPUART_STAT_TDRE_MASK) == 0);
-  LPUART0->DATA = send;
+  while(!LPUART_HAL_GetStatusFlag(LPUART0, LPUART_TX_DATA_REG_EMPTY));
+  LPUART_HAL_Putchar(LPUART0, send);
 }
 
 /**
@@ -249,8 +256,8 @@ void LPUART0_trancemit_buffer(const uint8_t *buffer, uint32_t len)
 {
     uint32_t idx;
     for (idx=0; idx<len; idx++) {
-        while ((LPUART0->STAT & LPUART_STAT_TDRE_MASK) == 0);
-        LPUART0->DATA = buffer[idx];
+        while (!LPUART_HAL_GetStatusFlag(LPUART0, LPUART_TX_DATA_REG_EMPTY));
+        LPUART_HAL_Putchar(LPUART0, buffer[idx]);
     }
 }
 
@@ -273,12 +280,12 @@ void LPUART0_transmit_string(const char *data_string)
 /**
  * \brief   串口接收一个字符
  */
-char LPUART0_receive_char(void)
+uint8_t LPUART0_receive_byte(void)
 {
-  char recieve;
-  while((LPUART0->STAT & LPUART_STAT_RDRF_MASK) == 0);
-  recieve= LPUART0->DATA;
-  return recieve;
+  uint8_t receive;
+  while(!LPUART_HAL_GetStatusFlag(LPUART0, LPUART_RX_DATA_REG_FULL));
+  LPUART_HAL_Getchar(LPUART0, &receive);
+  return receive;
 }
 
 /*

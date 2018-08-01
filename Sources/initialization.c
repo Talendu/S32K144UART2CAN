@@ -72,11 +72,12 @@ void get_default_config_info(void) {
     g_m_lpuart0_config.txmode = 0;
 
     g_m_flexcan_config.m_flexcan_user_config = canCom0_InitConfig0;
-    g_m_flexcan_config.rxmode = 0;
-    g_m_flexcan_config.txmode = 0;
+    g_m_flexcan_config.rxmode = 2;
+    g_m_flexcan_config.txmode = 2;
     g_m_flexcan_config.rx_id = 0x00;
     g_m_flexcan_config.tx_id = 0x00;
     g_m_flexcan_config.id_mask = 0x00;
+    g_m_flexcan_config.fd_enable = 0;
 }
 
 /**
@@ -90,6 +91,7 @@ void led_init(void) {
 
 /**
  * \brief   获取串口和CAN的参数
+ *
  * \details 如果读取EEPROM中的参数失败,则使用默认参数配置,
  *          读取成功则使用EEPROM中的参数
  */
@@ -104,9 +106,9 @@ void get_parameters(void) {
  */
 void init_all(void) {
     init_sys_clock();
-    init_pins();
     get_parameters();
-    init_flexcan();
+    init_pins();
+    flexcan_init();
     LPUART0_init(&g_m_lpuart0_config.lpuart0_user_config);
     key_init();
     led_init();
@@ -118,7 +120,7 @@ void init_all(void) {
  */
 void set_to_default_config(void) {
     get_default_config_info();
-    init_flexcan();
+    flexcan_init();
     LPUART0_init(&g_m_lpuart0_config.lpuart0_user_config);
     save_config_paramater_to_EEPROM();
 }

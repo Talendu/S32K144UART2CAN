@@ -30,7 +30,7 @@ void init_all(void);
 /**
  * \brief   初始化CAN
  */
-void init_flexcan(void);
+void flexcan_init(void);
 
 /**
  * \brief   初始化串口

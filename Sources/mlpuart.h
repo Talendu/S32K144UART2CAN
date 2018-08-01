@@ -16,9 +16,12 @@
 #include "mainloop.h"
 
 /* \brief   串口收到数据时,如果数据是连续的,将8个字节分为一个包
+ *
  * \member  descriptor  数据描述,  bit[7]=1 接收完成; bit[7]=0 接收中
  *                              bit[6:0] 数据长度,有效值0~8
  */
+#define __USE_TXRX_FIFO 1       /**< /brief 是否使用串口硬件FIFO, 1:使用, 0:不使用 */
+
 typedef struct {
     uint8_t descriptor;
     uint8_t data[8];
@@ -27,7 +30,7 @@ typedef struct {
 
 typedef void (*lpuart0_irq_callback_t)(void);
 
-extern uint16_t g_uart_rx_sta;       //接收状态标记
+extern uint16_t g_uart_rx_sta;      /**< /brief 接收状态标记  */
 extern uint8_t  g_uart_rx_buff[];
 
 extern const lpuart_user_config_t g_lpuart_default_UserConfig;
@@ -98,7 +101,7 @@ void LPUART0_transmit_string(const char data_string[]);
 /**
  * \brief   串口接收一个字符
  */
-char LPUART0_receive_char(void);
+uint8_t LPUART0_receive_byte(void);
 
 /*
  * \brief   将数字以字符串的形式通过串口发送

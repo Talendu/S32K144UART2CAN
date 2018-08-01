@@ -45,6 +45,8 @@ typedef enum {
     TXID_index,
     RXID_index,
     IDMASK_index,
+	FDEN_index,
+	FDBAUD_index,
     CONFIG_ITEM_COUNT
 }config_item_index_t;
 /**
@@ -75,6 +77,7 @@ typedef struct {
     uint32_t tx_id;             /**< \brief CAN发送邮箱ID */
     uint32_t rx_id;             /**< \brief CAN接收邮箱ID */
     uint32_t id_mask;           /**< \brief CAN接收邮箱ID掩码 */
+    uint8_t fd_enable;                          /**< \brief 使用CAN FD 0:不使用, 1:使用*/
 }m_flexcan_config_t;
 
 extern m_lpuart_config_t    g_m_lpuart0_config; /**< \brief lpuart配置信息 */
@@ -177,12 +180,31 @@ void LPUART0_print_can_info(config_item_index_t config_item_index);
 
 /**
  * \brief   将数字字符串转换为数字
- * \retval  STATUS_ERROR    转换错误
+ *
+ * \param   p_string[in]    要转换的字符串
+ * \param   p_number[out]   转换结果
+ *
+ * \retval  STATUS_ERROR    转换失败
  *          STATUS_SUCCESS  转换成功
- * \note    如果第一个元素不是数字,转换失败
- *          必须是含有结束位的字符串,否则可能会得到意料之外的结果
+ *
+ * \note    可以转换十进制字符串和十六进制字符串
+ *          十六进制字符串必须以0x或0X开头
+ *          如果第一个元素不是数字,转换失败
+ *          必须是含有结束符的字符串,否则可能会得到意料之外的结果
  */
 status_t string2number(const uint8_t *string, uint32_t *number);
 
+/**
+ * \brief   将十六进制字符串转换为数字
+ *
+ * \param   p_hex[in]       要转换的十六进制字符串
+ * \param   p_number[out]   转换结果
+ *
+ * \reval   STATUS_ERROR    转换失败
+ *          STATUS_SUCCESS  转换成功
+ *
+ * \note    输入的十六进制字符串必须是去掉0x或0X的字符串
+ *          转换的长度不能超过32位
+ */
 status_t hex2number(const uint8_t *p_hex, uint32_t *p_number);
 #endif /* CONFIG_H_ */

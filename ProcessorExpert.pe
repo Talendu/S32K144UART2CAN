@@ -3,7 +3,7 @@
   <Header>
     <Name>CAN2UART</Name>
     <SavedBy>Administrator</SavedBy>
-    <ModificationStamp>10</ModificationStamp>
+    <ModificationStamp>14</ModificationStamp>
     <Date>2018-04-17</Date>
     <IDE>Eclipse IDE</IDE>
     <PEversion>1.12.2.RT7_b1717-0708</PEversion>
@@ -15666,7 +15666,7 @@
         <ReadOnly>false</ReadOnly>
         <UserReadOnly>false</UserReadOnly>
         <PropertyModelIsAutomatic>false</PropertyModelIsAutomatic>
-        <Value>16</Value>
+        <Value>7</Value>
         <Base>DEC</Base>
       </ItemState>
       <ItemState>

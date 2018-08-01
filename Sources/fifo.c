@@ -29,8 +29,10 @@ void fifo_init(fifo_t   *p_fifo,
 
 /**
  * \brief   获取fifo尾指针
+ *
  * \param   p_fifo[in]              要操作的fifo
  * \param   pp_rear_pointer[out]    fifo尾指针
+ *
  * \retval  STATUS_SUCCESS  成功获取指针
  *          STATUS_ERROR    获取fifo尾指针失败,fifo满
  */
@@ -48,6 +50,7 @@ status_t fifo_get_rear_pointer(fifo_t *p_fifo, void **pp_rear_pointer) {
 
 /**
  * \brief   在fifo尾部添加完数据之后,更新尾指针
+ *
  * \param   p_fifo[in,out]  要操作的fifo
  */
 void fifo_append(fifo_t *p_fifo) {
@@ -61,8 +64,10 @@ void fifo_append(fifo_t *p_fifo) {
 
 /**
  * \brief   获取fifo头指针
+ *
  * \param   p_fifo[in]              要操作的fifo
  * \param   pp_data_pointer[out]    fifo头指针
+ *
  * \retval  STATUS_SUCCESS  成功获取指针
  *          STATUS_ERROR    获取fifo尾指针失败,fifo满
  */

@@ -12,7 +12,7 @@ flexcan_msgbuff_t g_can_receive_buff;
  * \brief   发送邮箱配置信息
  */
 flexcan_data_info_t g_rx_info = {
-        .data_length = 8,
+        .data_length = 64,
         .enable_brs = 1,
         .fd_enable = 0,
         .fd_padding = 0,
@@ -24,7 +24,7 @@ flexcan_data_info_t g_rx_info = {
  * \brief   接收邮箱配置信息
  */
 flexcan_data_info_t g_tx_info = {
-        .data_length = 8,
+        .data_length = 64,
         .enable_brs = 1,
         .fd_enable = 0,
         .fd_padding = 0,
@@ -44,6 +44,7 @@ FLEXCAN_RX_DATA_TYPE __g_flexcan_rx_base[__FLEXCAN_RX_FIFO_SIZE];
 
 /**
  * \brief   透明传输模式CAN接收回掉函数
+ *
  * \param   instance    CAN通道
  * \param   eventType   中断类型
  * \param   state       CAN通道状态信息
@@ -80,6 +81,7 @@ void can_callback_transmission(uint8_t               instance,
 
 /**
  * \brief   参数配置模式CAN接收回掉函数
+ *
  * \param   instance    CAN通道
  * \param   eventType   中断类型
  * \param   state       CAN通道状态信息
@@ -98,32 +100,71 @@ void can_callback_config(uint8_t               instance,
 /**
  * \brief   初始化CAN
  */
-void init_flexcan(void)
+void flexcan_init(void)
 {
     fifo_init(&g_flexcan_rx_fifo,                                   /* can接收fifo; */
             __g_flexcan_rx_base,                                      /* can接收fifo内存空间; */
             sizeof(__g_flexcan_rx_base)/sizeof(FLEXCAN_RX_DATA_TYPE), /* can接收fifo元素容量,非内存大小; */
             sizeof(FLEXCAN_RX_DATA_TYPE));                        /* can接收数据数据类型大小. */
+
     /* 复位CAN0 */
     FLEXCAN_DRV_Deinit(INST_CANCOM0);
+
     /* 初始化CAN0 */
     FLEXCAN_DRV_Init(INST_CANCOM0, &canCom0_State,
             &g_m_flexcan_config.m_flexcan_user_config);
-    /* 设置全局ID屏蔽码 */
-    FLEXCAN_DRV_SetRxMbGlobalMask(INST_CANCOM0,
-            FLEXCAN_MSG_ID_EXT, g_m_flexcan_config.id_mask);
-
-    /* 配置接收邮箱信息 */
+    /* 设置邮箱接收完成回掉函数 */
     FLEXCAN_DRV_InstallEventCallback(INST_CANCOM0,
-            can_callback_transmission, NULL); /* 设置邮箱接收完成回掉函数 */
+            can_callback_transmission, NULL);
+
+    /* 设置全局ID屏蔽码 */
+    if (g_m_flexcan_config.rxmode == 0) {         /* 模式0,只接受标准帧 */
+        flexcan_init_STD_MB();
+    } else if (g_m_flexcan_config.rxmode == 1) {  /* 模式1,只接受扩展帧 */
+        flexcan_init_EXT_MB();
+    } else if (g_m_flexcan_config.rxmode == 2) {  /* 模式1,接收两种帧 */
+        if (g_m_flexcan_config.rx_id == 0) {      /* ID等于0,接收所有标准帧和扩展帧 */
+            flexcan_init_STD_MB();
+            flexcan_init_EXT_MB();
+            FLEXCAN_DRV_SetRxMbGlobalMask(INST_CANCOM0,
+                        FLEXCAN_MSG_ID_EXT, 0);
+        } else if ((g_m_flexcan_config.rx_id & (~0x7ff)) != 0) {
+            flexcan_init_EXT_MB();
+        } else {
+            flexcan_init_STD_MB();
+        }
+    }
+}
+
+/**
+ * \brief   初始化标准帧邮箱
+ */
+void flexcan_init_STD_MB()
+{
+    FLEXCAN_DRV_SetRxMbGlobalMask(INST_CANCOM0,
+                FLEXCAN_MSG_ID_STD, g_m_flexcan_config.id_mask);
+
+    g_rx_info.fd_enable = g_m_flexcan_config.fd_enable;
     g_rx_info.msg_id_type = FLEXCAN_MSG_ID_STD;       /* 标准帧接收邮箱 */
     FLEXCAN_DRV_ConfigRxMb(INST_CANCOM0, RECEIVE_STD_MB,
             &g_rx_info, g_m_flexcan_config.rx_id);
-    FLEXCAN_DRV_Receive(INST_CANCOM0, RECEIVE_STD_MB, &g_can_receive_buff);
 
+    FLEXCAN_DRV_Receive(INST_CANCOM0, RECEIVE_STD_MB, &g_can_receive_buff);
+}
+
+/**
+ * \brief   初始化远程帧邮箱
+ */
+void flexcan_init_EXT_MB()
+{
+    FLEXCAN_DRV_SetRxMbGlobalMask(INST_CANCOM0,
+                FLEXCAN_MSG_ID_EXT, g_m_flexcan_config.id_mask);
+
+    g_rx_info.fd_enable = g_m_flexcan_config.fd_enable;
     g_rx_info.msg_id_type = FLEXCAN_MSG_ID_EXT;       /* 扩展帧接收邮箱 */
     FLEXCAN_DRV_ConfigRxMb(INST_CANCOM0, RECEIVE_EXT_MB,
             &g_rx_info, g_m_flexcan_config.rx_id);
+
     FLEXCAN_DRV_Receive(INST_CANCOM0, RECEIVE_EXT_MB, &g_can_receive_buff);
 }
 
@@ -155,9 +196,8 @@ void flexcan_get_source_clock(uint32_t *p_flexcanSourceClock)
  * \note    优先使用量子数量与16接近的分频系数,
  *          优先设置采样点在比特时间的80%处
  */
-status_t flexcan_set_baud(const uint8_t *p_parameter)
+status_t flexcan_set_baud(uint32_t baud)
 {
-    uint32_t baud;
 
     uint32_t presdiv = 0;
     uint32_t propseg = 0;
@@ -175,9 +215,6 @@ status_t flexcan_set_baud(const uint8_t *p_parameter)
 
     backup_clk_source = g_m_flexcan_config.m_flexcan_user_config.pe_clock;
 
-    if (string2number(p_parameter, &baud) != STATUS_SUCCESS) {
-        return STATUS_ERROR;
-    }
     /* 由于计算过程中会改变时钟,所以先失能CAN */
     FLEXCAN_HAL_Disable(CAN0);
     if (baud > 60000) {
@@ -260,6 +297,114 @@ status_t flexcan_set_baud(const uint8_t *p_parameter)
 }
 
 /**
+ * \brief   修改CAN比特率
+ *
+ * \param   p_parameter[in]     比特率,输入数字字符串
+ * \retval  修改成功返回: STATUS_SUCCESS
+ *          修改失败返回: DTATUS_ERROR
+ *
+ * \note    优先使用量子数量与16接近的分频系数,
+ *          优先设置采样点在比特时间的80%处
+ */
+status_t flexcan_set_fdbaud(uint32_t baud)
+{
+
+    uint32_t presdiv = 0;
+    uint32_t propseg = 0;
+    uint32_t pseg1 = 0;
+
+    uint32_t pseg2 = 0;
+    uint32_t rjw = 0;
+    uint32_t bittime = 0;
+
+    uint32_t flexcanSourceClock = 0;
+
+    uint8_t i = 0;
+    uint8_t j = 0;
+
+    /* 由于计算过程中会改变时钟,所以先失能CAN */
+    FLEXCAN_HAL_Disable(CAN0);
+    flexcan_get_source_clock(&flexcanSourceClock);
+
+    if (baud > (flexcanSourceClock/5))
+    {
+        return STATUS_ERROR;
+    }
+
+    bittime = flexcanSourceClock/baud;
+    for (i=26; i>4; i--) {
+        if (bittime % i == 0) {
+            break;
+        }
+    }
+    for (j=27; j<48; j++) {
+        if (bittime % j == 0) {
+            break;
+        }
+    }
+    if (i != 4) {               /* [5,25]有可用的量子数 */
+        if (j != 49) {          /* [27,48]有可用的量子数 */
+            if (26-i > j-26) {  /* 选择离26最近的量子 */
+                i=j;
+            }
+        }
+    } else if (j != 49 ) {      /* [5,26]无可用的量子数 */
+        i = j;                  /* [27,48]有可用的量子数 */
+    }
+
+    LPUART0_transmit_string("\r\n");
+    LPUART_transmit_number(LPUART0, i);
+
+    if (i == 4 || bittime/i>256) {  /* 无法配置到目标参数 */
+        FLEXCAN_HAL_Enable(CAN0);
+        return STATUS_ERROR;
+    }
+
+    presdiv = bittime/i-1;   /* 预分频. */
+    pseg2=i/5;
+    if (pseg2 < 2) {         /* pseg2至少是2 */
+        pseg2 = 2;
+    }else if (pseg2 > 8){
+        pseg2 = 8;
+    }
+    pseg1 = 1;               /* pseg1至少是1 */
+    propseg = i-pseg2-pseg1-1; /* propseg最大化 */
+    if (propseg > 31) {       /* propseg超过8,将多余的部分分到pseg1上 */
+        pseg1 += propseg-31;
+        propseg = 31;
+    }
+    if (pseg1 > 8) {         /* pseg1超过8,将多余部分加到pseg2上 */
+        pseg2 += pseg1 - 8;
+        pseg1 = 8;
+    }
+    (pseg2)--;               /* 寄存器中的值比实际值少一 */
+    (pseg1)--;
+
+    rjw = pseg1;             /* 同步偏移量取3, pseg1, pseg2中最小的*/
+    if (rjw > pseg2) {
+        rjw = pseg2;
+    }
+    if (rjw > 3) {
+        rjw = 3;
+    }
+
+    /* 将值拷贝到配置信息中 */
+    g_m_flexcan_config.m_flexcan_user_config.bitrate_cbt.preDivider = presdiv;
+    g_m_flexcan_config.m_flexcan_user_config.bitrate_cbt.propSeg    = propseg;
+    g_m_flexcan_config.m_flexcan_user_config.bitrate_cbt.phaseSeg1  = pseg1;
+
+    g_m_flexcan_config.m_flexcan_user_config.bitrate_cbt.phaseSeg2  = pseg2;
+    g_m_flexcan_config.m_flexcan_user_config.bitrate_cbt.rJumpwidth = rjw;
+
+
+    FLEXCAN_HAL_Enable(CAN0);
+    /* 设置比特率 */
+    FLEXCAN_DRV_SetBitrateCbt(INST_CANCOM0,
+            &g_m_flexcan_config.m_flexcan_user_config.bitrate_cbt);
+    return STATUS_SUCCESS;
+}
+
+/**
  * \brief   获取CAN波特率
  */
 uint32_t flexcan_get_baud(void)
@@ -270,5 +415,19 @@ uint32_t flexcan_get_baud(void)
     flexcan_get_source_clock(&flexcanSourceClock);
     baud = flexcanSourceClock/(bitrate->preDivider+1)/
             (bitrate->propSeg + bitrate->phaseSeg1 + bitrate->phaseSeg2 + 4);
+    return baud;
+}
+
+/**
+ * \brief   获取CAN FD波特率
+ */
+uint32_t flexcan_get_fdbaud(void)
+{
+    uint32_t baud = 0;
+    flexcan_time_segment_t *bitrate = &g_m_flexcan_config.m_flexcan_user_config.bitrate_cbt;
+    uint32_t flexcanSourceClock;
+    flexcan_get_source_clock(&flexcanSourceClock);
+    baud = flexcanSourceClock/(bitrate->preDivider+1)/
+            (bitrate->propSeg + bitrate->phaseSeg1 + bitrate->phaseSeg2 + 3);
     return baud;
 }
